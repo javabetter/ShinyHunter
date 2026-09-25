@@ -149,6 +149,7 @@ Player lookups use the proxy address set as `api_proxy_url` in `gradle.propertie
 
 Made by **GamingLegend123**, with **Claude**.
 Settings screen by [MoulConfig](https://github.com/NotEnoughUpdates/MoulConfig). HUD editing via [Firmament](https://github.com/nea89o/Firmament)'s JARVIS.
+The icon is drawn from plain geometry by [`tools/make_icon.py`](tools/make_icon.py) — run it to regenerate the SVG, PNG and ICO.
 
 ## License
 
