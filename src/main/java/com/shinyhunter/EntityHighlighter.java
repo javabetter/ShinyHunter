@@ -335,7 +335,7 @@ public final class EntityHighlighter {
 
     private static void maybeAnnounce(Minecraft client, Entity entity, long now) {
         // Only what's in view is announced, and without a position.
-        if (!Sight.canSee(client, entity)) {
+        if (!Sight.canDetect(client, entity)) {
             return;
         }
         Long last = ANNOUNCED.get(entity.getId());

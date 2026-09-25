@@ -24,10 +24,9 @@ import java.util.Map;
  *       that don't carry the word in their name until you interact with them.</li>
  * </ul>
  *
- * <p>Only what's in plain view counts: the server sends mobs well before you could see them (76
- * blocks off and underground, in one log), and an alert for something behind a wall would be
- * information no player has. So every match must pass {@link Sight#canSee} first, and alerts say
- * what was seen, never where.
+ * <p>Only what you could see counts: the server sends mobs well before that (76 blocks off and
+ * underground, in one log). A nametag match needs the name on your screen and a particle match
+ * needs the mob in plain view ({@link Sight}); alerts say what was seen, never where.
  */
 public final class ShinyScanner {
     /** Two scans a second — fast enough that a shiny is flagged well before it can walk out of range. */
@@ -96,7 +95,10 @@ public final class ShinyScanner {
 
         for (Match match : findMatches(client, needles)) {
             Entity entity = match.entity();
-            if (!Sight.canSee(client, entity)) {
+            // A name may be acted on once it's on your screen; a particle match has no name to
+            // read, so the mob itself has to be in plain view.
+            if (!(match.reason() == Reason.NAMETAG
+                    ? Sight.canDetect(client, entity) : Sight.canSee(client, entity))) {
                 continue;
             }
             REASONS.put(entity.getId(), match.reason());

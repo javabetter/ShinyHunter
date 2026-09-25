@@ -8,15 +8,50 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Line-of-sight tests. Shiny Hunter only reacts to what the player could actually see: an entity
- * behind terrain, or underground on its way up, is off limits even though the server has sent it.
+ * What the player could actually see. Shiny Hunter only reacts to a name that's on your screen or
+ * a mob in plain view: an entity behind you, out of range, or underground on its way up is off
+ * limits even though the server has sent it.
  */
 public final class Sight {
 
     /** Beyond this the player couldn't make out a nametag anyway. */
     private static final double MAX_DISTANCE = 64.0;
 
+    /** Entity id -> when the game last drew its nametag. Filled in by the render mixin. */
+    private static final java.util.Map<Integer, Long> NAMETAG_DRAWN = new java.util.HashMap<>();
+
+    /** A nametag drawn within this long ago counts as on screen now (a few frames of slack). */
+    private static final long NAMETAG_FRESH_MILLIS = 500;
+
     private Sight() {
+    }
+
+    /**
+     * Called from the entity renderer whenever the game fills in a nametag for this frame. The game
+     * only does that for an entity inside the camera's view (not behind you), within nametag range
+     * (64 blocks), whose name it would show — so this is exactly "the name is on your screen".
+     */
+    public static void markNametagDrawn(int entityId) {
+        NAMETAG_DRAWN.put(entityId, System.currentTimeMillis());
+    }
+
+    /** True when this entity's nametag is on the player's screen right now. */
+    public static boolean nametagOnScreen(Entity entity) {
+        Long at = NAMETAG_DRAWN.get(entity.getId());
+        return at != null && System.currentTimeMillis() - at < NAMETAG_FRESH_MILLIS;
+    }
+
+    /**
+     * Whether something may be reacted to: its nametag is on your screen, or the mob itself is in
+     * plain view. A name you can read yourself is fair game even through a wall — vanilla draws
+     * nametags through walls — but a name that's behind you, too far off, or hidden is not.
+     */
+    public static boolean canDetect(Minecraft client, Entity entity) {
+        if (NAMETAG_DRAWN.size() > 4096) {
+            long cutoff = System.currentTimeMillis() - NAMETAG_FRESH_MILLIS;
+            NAMETAG_DRAWN.values().removeIf(at -> at < cutoff);
+        }
+        return nametagOnScreen(entity) || canSee(client, entity);
     }
 
     /**

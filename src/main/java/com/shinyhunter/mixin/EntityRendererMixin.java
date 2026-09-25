@@ -1,6 +1,7 @@
 package com.shinyhunter.mixin;
 
 import com.shinyhunter.EntityHighlighter;
+import com.shinyhunter.Sight;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.world.entity.Entity;
@@ -21,5 +22,9 @@ public class EntityRendererMixin {
             at = @At("TAIL"))
     private void shinyhunter$stampTint(Entity entity, EntityRenderState state, float partialTick, CallbackInfo ci) {
         ((TintHolder) state).shinyhunter$setTint(EntityHighlighter.tintFor(entity.getId()));
+        // A nametag filled in here is one the game is about to draw on screen this frame.
+        if (state.nameTag != null) {
+            Sight.markNametagDrawn(entity.getId());
+        }
     }
 }

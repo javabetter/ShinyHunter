@@ -35,6 +35,9 @@ public final class ShinyConfig {
     /** Skip drawing paintings anywhere in the Critter Safari (they hide critters behind them). */
     public boolean hidePaintingsInSafari = true;
 
+    /** On joining Hypixel, say so in chat if a newer Shiny Hunter release is out on GitHub. */
+    public boolean checkForUpdates = true;
+
     /** Master switch. {@code /shinyhunter toggle}. */
     public boolean enabled = true;
 

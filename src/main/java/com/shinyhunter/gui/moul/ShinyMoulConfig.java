@@ -213,6 +213,11 @@ public class ShinyMoulConfig extends Config {
     public static class AlertsCategory {
 
         @Expose
+        @ConfigOption(name = "Update notices", desc = "Say in chat when a newer Shiny Hunter is out, with a link to it.")
+        @ConfigEditorBoolean
+        public boolean checkForUpdates;
+
+        @Expose
         @ConfigOption(name = "Sound", desc = "Play a sound on a find.")
         @ConfigEditorBoolean
         public boolean playSound;

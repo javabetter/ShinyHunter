@@ -118,6 +118,7 @@ public class ShinyHunterClient implements ClientModInitializer {
 
         ShinyConfig config = ShinyConfig.get();
         Welcome.register();
+        UpdateChecker.register();
         var all = ShinyScanner.allKeywords(config);
         var everywhere = ShinyScanner.activeKeywords(config, false);
         LOGGER.info("{} loaded — hunting {} (in {}), of which {} hunt everywhere.", Edition.NAME,

@@ -205,6 +205,8 @@ public class ConfigScreen extends Screen {
                 () -> c.chunkReloadRepeatTicks, v -> c.chunkReloadRepeatTicks = v, 1, 20);
 
         section("Alerts");
+        bool("Update notices", "Say in chat when a newer Shiny Hunter is out, with a link to it.",
+                () -> c.checkForUpdates, v -> c.checkForUpdates = v);
         bool("Sound", "Play a sound on a find.", () -> c.playSound, v -> c.playSound = v);
         bool("Action bar", "Show finds on the action bar too.",
                 () -> c.actionBar, v -> c.actionBar = v);

@@ -20,7 +20,7 @@
 ### ✨ Sparkling alerts
 - A title card, chat banner and a three-note fanfare the moment a **SPARKLING** critter comes into view.
 - Detects sparklings by their nametag, and by the sparkle-particle trail they leave before their name shows.
-- **Line of sight only:** you're only alerted about critters you could actually see — nothing behind walls or underground, and never with coordinates.
+- **Only what's on your screen:** you're alerted when a sparkling's nametag is on your screen, exactly as the game draws it — within nametag range and in front of you, never behind you — or when the critter itself is in plain view. Never with coordinates.
 - `/shiny history` keeps every sparkling you've caught, with dates, biome colours and a running total.
 
 ### 📋 Critter tracking
@@ -61,6 +61,7 @@
 - Paintings are hidden inside the Critter Safari.
 - Movable, resizable HUD panels (`/shiny hud`), with [Firmament](https://modrinth.com/mod/firmament)'s JARVIS HUD editor supported.
 - Settings screen powered by MoulConfig, the same library Firmament uses.
+- Update notices: tells you in chat when a new version is out, with a link to it.
 
 ---
 
@@ -122,10 +123,11 @@ Anyone in your party can type these; each one can be switched off in settings.
 
 Shiny Hunter is built to only tell you what you could see or look up yourself:
 
-- **No through-wall information about mobs.** Alerts, outlines and labels for critters only appear when the critter is in view. The only markers drawn through walls are fixed scenery whose positions never change — bee nests, honeyhives and the Snoozling walls.
+- **Only what you can see.** Alerts react to a nametag the game is drawing on your screen, or a mob in plain view — nothing behind you, out of nametag range, or hidden. Outlines and labels for mobs don't show through walls. The only markers drawn through walls are fixed scenery whose positions never change — bee nests, honeyhives and the Snoozling walls.
 - **No coordinates in alerts,** and no positions ever sent to party chat.
 - **Nothing happens without you.** The mod only sends what a player could: party-chat messages from the features you have switched on, and the quest Accept click when *you* click. Everything else stays on your screen.
 - **Your account is safe.** Shiny Hunter never asks for, reads or sends your login. Player lookups (`/sparkling`, party dex) go through the Shiny Hunter API, a small proxy that holds a Hypixel API key so you don't need one. It only ever sends a player's UUID (looked up from their name with Mojang), and only receives that player's public Critter Safari stats.
+- **Update notices.** When you join Hypixel, the mod reads the public GitHub releases page once to see if a newer version is out, and says so in chat with a link. Switch off under *Alerts → Update notices*.
 
 > ⚠️ **Use at your own risk.** Shiny Hunter is a third-party mod and is not affiliated with or endorsed by Hypixel or Mojang. Hypixel's rules on modifications apply; check them yourself and switch off any feature you're unsure about.
 
@@ -149,7 +151,6 @@ Player lookups use the proxy address set as `api_proxy_url` in `gradle.propertie
 
 Made by **GamingLegend123**, with **Claude**.
 Settings screen by [MoulConfig](https://github.com/NotEnoughUpdates/MoulConfig). HUD editing via [Firmament](https://github.com/nea89o/Firmament)'s JARVIS.
-The icon is drawn from plain geometry by [`tools/make_icon.py`](tools/make_icon.py) — run it to regenerate the SVG, PNG and ICO.
 
 ## License
 
