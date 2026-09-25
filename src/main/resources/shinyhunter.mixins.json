@@ -1,0 +1,17 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.shinyhunter.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "MultiPlayerGameModeMixin",
+    "ClientPacketListenerMixin",
+    "EntityRenderDispatcherMixin",
+    "EntityRenderStateMixin",
+    "EntityRendererMixin",
+    "LivingEntityRendererMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

@@ -1,0 +1,24 @@
+# Gradle / build output
+.gradle/
+build/
+out/
+
+# Dev client
+run/
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+bin/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Never commit keys or local config
+*.env
+config/

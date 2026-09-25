@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "id": "shinyhunter",
+  "version": "${version}",
+  "name": "${name}",
+  "description": "A Critter Safari companion for Hypixel Skyblock: sparkling alerts, critter tracking, clearer highlights, honeyhive and Snoozling wall markers, run timers and party tools.",
+  "authors": [
+    "GamingLegend123",
+    "Claude Opus 5"
+  ],
+  "contact": {
+    "homepage": "https://github.com/javabetter/ShinyHunter",
+    "sources": "https://github.com/javabetter/ShinyHunter",
+    "issues": "https://github.com/javabetter/ShinyHunter/issues"
+  },
+  "license": "MIT",
+  "icon": "assets/shinyhunter/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "com.shinyhunter.ShinyHunterClient"
+    ],
+    "jarvis": [
+      "com.shinyhunter.compat.JarvisIntegration"
+    ]
+  },
+  "mixins": [
+    "shinyhunter.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.19.3",
+    "minecraft": "~26.1.2",
+    "java": ">=25",
+    "fabric-api": "*",
+    "fabric-language-kotlin": ">=1.13.0"
+  },
+  "suggests": {
+    "firmament": "*",
+    "jarviscci": "*"
+  }
+}
