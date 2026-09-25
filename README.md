@@ -71,7 +71,7 @@
 
    | Mod | Where to get it |
    |---|---|
-   | **Shiny Hunter** | [Latest release](https://github.com/javabetter/ShinyHunter/releases/latest) — `ShinyHunter v2.0 26.1.2.jar` |
+   | **Shiny Hunter** | [Latest release](https://github.com/javabetter/ShinyHunter/releases/latest) — `ShinyHunter-v2.0-26.1.2.jar` |
    | **Fabric API** | [Modrinth](https://modrinth.com/mod/fabric-api) |
    | **Fabric Language Kotlin** | [Modrinth](https://modrinth.com/mod/fabric-language-kotlin) |
 
