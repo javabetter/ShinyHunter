@@ -276,6 +276,11 @@ public class ShinyMoulConfig extends Config {
         public int beeNestScanRadius;
 
         @Expose
+        @ConfigOption(name = "Through walls", desc = "Draw nest outlines through terrain (nests never move, so this is allowed).")
+        @ConfigEditorBoolean
+        public boolean beeNestThroughWalls;
+
+        @Expose
         @ConfigOption(name = "Hive beacons", desc = "Beacon the honeyhives that still have honey, while the contest is unfinished.")
         @ConfigEditorBoolean
         public boolean honeyHiveWaypoints;

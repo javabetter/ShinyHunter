@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Waypoints on the five Snoozling walls, drawn through terrain while in the Safari.
+ * Waypoints on the five Snoozling walls, drawn through terrain in both editions while in the Safari.
  *
  * <p>The walls are at fixed, publicly known spots in every instance, so marking them reveals nothing
  * the player couldn't look up — it just saves the walk around. A wall is dropped from the markers
@@ -68,6 +68,7 @@ public final class SnoozlingWallMarkers {
         try {
             for (Wall wall : shown) {
                 Vec3 centre = Vec3.atCenterOf(wall.pos());
+                HighlightMarkers.add(centre, stroke, "Wall " + wall.number(), true);
                 Gizmos.cuboid(wall.pos(), GizmoStyle.strokeAndFill(stroke, 2.0f, fill))
                         .persistForMillis(GIZMO_LIFETIME_MILLIS)
                         .setAlwaysOnTop();

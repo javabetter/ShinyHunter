@@ -744,6 +744,9 @@ public final class ShinyConfig {
      */
     public int beeNestScanRadius = 128;
 
+    /** Draw the outlines through terrain, so a nest behind a hill is still visible. Nests never move. */
+    public boolean beeNestThroughWalls = true;
+
     // ---------------------------------------------------------------- persistence
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();

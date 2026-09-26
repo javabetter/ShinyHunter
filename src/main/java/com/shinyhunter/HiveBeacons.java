@@ -60,7 +60,7 @@ public final class HiveBeacons {
     }
 
     private static void collect(LevelRenderContext context) {
-        if (BEAMS.isEmpty() || broken) {
+        if (BEAMS.isEmpty() || broken || Shaders.active()) {
             return;
         }
         try {

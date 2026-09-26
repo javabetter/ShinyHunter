@@ -172,7 +172,10 @@ public final class BeeNestHighlighter {
 
         try {
             for (BlockPos pos : NESTS) {
-                Gizmos.cuboid(pos, style).persistForMillis(GIZMO_LIFETIME_MILLIS);
+                // Nests are fixed scenery, so their outline may show through walls in either edition.
+                HighlightMarkers.add(centreOf(pos), stroke, "Nest", config.beeNestThroughWalls);
+                Shaders.place(Gizmos.cuboid(pos, style).persistForMillis(GIZMO_LIFETIME_MILLIS),
+                        config.beeNestThroughWalls);
             }
         } catch (IllegalStateException e) {
             // Thrown when no gizmo collector is registered on this thread. That shouldn't happen from

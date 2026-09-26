@@ -6,6 +6,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.shinyhunter.gui.ConfigScreen;
 import com.shinyhunter.gui.HudEditorScreen;
 import com.shinyhunter.gui.HudOverlay;
+import com.shinyhunter.gui.ShaderMarkerOverlay;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
@@ -31,6 +32,9 @@ public class ShinyHunterClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        // First, so the highlighters below refill it: they record fixed markers here for the
+        // shader-safe HUD overlay, which needs last tick's list gone before they start.
+        ClientTickEvents.END_CLIENT_TICK.register(client -> HighlightMarkers.beginTick());
         ClientTickEvents.END_CLIENT_TICK.register(ShinyScanner::onClientTick);
         ClientTickEvents.END_CLIENT_TICK.register(PaintingHider::onClientTick);
         ClientTickEvents.END_CLIENT_TICK.register(ChunkReloader::onClientTick);
@@ -83,6 +87,7 @@ public class ShinyHunterClient implements ClientModInitializer {
         HoneyHives.register();
         HiveBeacons.register();
         HudOverlay.register();
+        ShaderMarkerOverlay.register();
 
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
             dispatcher.register(buildCommand(literal("shinyhunter")));
@@ -119,6 +124,7 @@ public class ShinyHunterClient implements ClientModInitializer {
         ShinyConfig config = ShinyConfig.get();
         Welcome.register();
         UpdateChecker.register();
+        Shaders.registerWithIris();
         var all = ShinyScanner.allKeywords(config);
         var everywhere = ShinyScanner.activeKeywords(config, false);
         LOGGER.info("{} loaded — hunting {} (in {}), of which {} hunt everywhere.", Edition.NAME,

@@ -230,6 +230,8 @@ public class ConfigScreen extends Screen {
                 () -> c.beeNestColor, v -> c.beeNestColor = v);
         number("Search radius", "How far to look for nests, in blocks.",
                 () -> c.beeNestScanRadius, v -> c.beeNestScanRadius = v, 8, 256);
+        bool("Through walls", "Draw nest outlines through terrain (nests never move, so this is allowed).",
+                () -> c.beeNestThroughWalls, v -> c.beeNestThroughWalls = v);
         bool("Hive beacons", "Beacon the honeyhives that still have honey, while the contest is unfinished.",
                 () -> c.honeyHiveWaypoints, v -> c.honeyHiveWaypoints = v);
         bool("Only when incomplete", "Hide the hive beacons once the contest is complete.",

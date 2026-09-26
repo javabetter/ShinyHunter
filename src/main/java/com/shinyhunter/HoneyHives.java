@@ -174,6 +174,7 @@ public final class HoneyHives {
         ShinyConfig config = ShinyConfig.get();
         if (!config.honeyHiveWaypoints || client.level == null || client.player == null) {
             VISIBLE.clear();
+            HiveBeacons.clear();
             return;
         }
         if (++refreshCounter >= REFRESH_INTERVAL_TICKS) {
@@ -181,7 +182,11 @@ public final class HoneyHives {
             refresh(client);
         }
         if (!shouldShow(client, config)) {
+            // The beams are held by HiveBeacons and drawn every frame until told otherwise, so
+            // they have to be cleared here too — clearing VISIBLE alone left them standing after
+            // the contest was completed.
             VISIBLE.clear();
+            HiveBeacons.clear();
             return;
         }
         if (++stateCounter >= STATE_INTERVAL_TICKS) {
@@ -284,7 +289,9 @@ public final class HoneyHives {
                 if (config.honeyHiveOutline) {
                     outline(nest, entry.getValue(), config);
                 }
-                if (HiveBeacons.broken()) {
+                // A shader pack draws the real beam with its own beacon program (translucent and
+                // frozen in some packs), so with one on the drawn column is used instead.
+                if (HiveBeacons.broken() || Shaders.active()) {
                     column(nest, entry.getValue(), config);
                 }
             }
@@ -310,9 +317,9 @@ public final class HoneyHives {
         BlockPos pos = new BlockPos(nest.x, nest.y, nest.z);
         var box = Gizmos.cuboid(pos, GizmoStyle.strokeAndFill(colour, 2.0f, fill))
                 .persistForMillis(GIZMO_LIFETIME_MILLIS);
-        if (config.honeyHiveThroughWalls) {
-            box.setAlwaysOnTop();
-        }
+        Shaders.place(box, config.honeyHiveThroughWalls);
+        HighlightMarkers.add(new Vec3(nest.x + 0.5, nest.y + 0.5, nest.z + 0.5), colour, "Hive",
+                config.honeyHiveThroughWalls);
     }
 
     // ------------------------------------------------------------------ the API
