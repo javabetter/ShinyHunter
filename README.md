@@ -1,157 +1,74 @@
-<p align="center">
-  <img src="src/main/resources/assets/shinyhunter/icon.png" width="96" alt="Shiny Hunter icon">
-</p>
-
-<h1 align="center">Shiny Hunter</h1>
-
-<p align="center">
-  <b>A Critter Safari companion for Hypixel Skyblock.</b><br>
-  Sparkling alerts, a live critter checklist, clearer highlights, honeyhive and Snoozling wall markers, run timers and party tools — all in one client-side Fabric mod.
-</p>
-
-<p align="center">
-  Minecraft <b>26.1.2</b> · Fabric · Client-side only
-</p>
-
----
+# Shiny Hunter
+Shiny Hunter is a Critter Safari companion mod for Hypixel Skyblock! It includes a **_ton_** of useful features ~~and even more useless ones~~, such as a detecting when a sparkling critter is within line-of-sight, a custom jarvis-compatible HUD, party commands, player API checks, contest reminders, and much, much more...
 
 ## Features
+### Sparkling alerts
+- Displays a title, chat message, and audio when a sparkling critter is detected
+- Detection picks up particles and nametags of sparklings (NOTE: to comply with Hypixel rules, it will only notify the player if the particles are within unobstructed line-of-sight of the player. The nametag detection works as long as the nametag is on your screen.)
+- `/shiny history`keeps track of every sparkling you catch, along with dates and a running total. Colored per-biome for your viewing pleasure!
 
-### ✨ Sparkling alerts
-- A title card, chat banner and a three-note fanfare the moment a **SPARKLING** critter comes into view.
-- Detects sparklings by their nametag, and by the sparkle-particle trail they leave before their name shows.
-- **Only what's on your screen:** you're alerted when a sparkling's nametag is on your screen, exactly as the game draws it — within nametag range and in front of you, never behind you — or when the critter itself is in plain view. Never with coordinates.
-- `/shiny history` keeps every sparkling you've caught, with dates, biome colours and a running total.
+### Critter tracking
+- Per-biome HUD checklist for each unique critter that has not been caught that run. Automatically checked off if any player in the party catches a mob of that type.
+- If a unique critter of a certain type (e.g. Rockmite) has not been caught yet that run, all critters of that type will be outlined. This makes seeing remaining uniques for hunting skill exp _**WAY**_ easier!
+- `!missing`, `!missing <biome>`, or `!m <first letter of biome>` in party chat will announce what mobs have not yet been caught in a biome. Super convenient for calling out your party for skipping something...
 
-### 📋 Critter tracking
-- A HUD checklist of all 37 critters across the Forest, Cavern, Icy and Haunted biomes, ticked off as you catch them (and as your party's loot shares come in).
-- Critters you still need are outlined in the world; the outline disappears once you've caught one.
-- `!missing` in party chat answers with what the run still needs.
+### Highlights, outlines, and waypoints
+- Clear, customizable outlines and highlights for each mob, including disguised Duplicos, Hideonfloors, and other tricky mobs.
+- Floor drops, rockmite rocks, and Honeybug nests are outlined
+- Waypoints for Snoozle walls
 
-### 🔎 Clearer highlights
-- Oversized outlines that stand clear of the mob, with a minimum size so small critters (like the Gazer) are easy to spot.
-- Outlined mobs are **tinted** toward their outline colour.
-- Disguised Duplicos, shulkers and other tricky critters are outlined properly, with no flicker.
-- Floor drops, rocks and punchable cases get their own outlines.
-- Name labels only where the game doesn't already show one, and only when you can see them.
+### Contest tracking
+- Never again experience the utter depression of missing a Miria's Contest with Shiny Hunter's contest timer HUD!
+- If an incompleted contest has 5 minutes or less remaining, a reminder will be sent in chat along with a bell sound
+- When a contest has been completed, it will mark as finished automatically
+- Full bee nests on Torrhus canyon will be highlighted with a beacon beam when a contest is incomplete. Bee nests will not be highlighted if the contest has already been completed or if they are empty
 
-### 🐝 Bee nests & honeyhives
-- Every bee nest nearby is outlined; emptied ones drop off the list.
-- Full honeyhives get a **real beacon beam** while Miria's Contest is still incomplete, using what you can see plus your profile's hive refill times.
-- `/shiny hives` lists what's known about each hive.
+### Party tools
+- `/sparkling <username>` show's a players relevant safari stats from Hypixel's API, including sparklings caught, number of tickets (with rarity), hunting level, and more
+- Party sparkling checker: automatically runs `/sparkling` for the player that because why not
+- `!shared` will check the sparklings of all players in the party, then send the shared ones in party chat so your party can skip them! (This automatically runs when a party is filled)
+- A decent amount of relevant party commands, including `!dt` and `!timer`
 
-### 🧱 Snoozling walls
-- Waypoints on all five Snoozling walls, with live distance. Each one disappears once its wall is broken.
+### Miscelaneous
+- Reload chunk keybind: set a keybind to spam reload chunks. This basically mimics the behavior of F3+A to allow you to see hitboxes through unrendered chunks, but without the chat spam
+- Paintings are hidden in the safari to make Hideonwalls easier
+- Movable, resizable HUD `/shiny HUD` powered by jarvis
+- Config menu powered by MoulConfig, the same library [Firmament](https://modrinth.com/mod/firmament) and other mods use
+- Click anywhere when chat is open to accept Hideyho quest
 
-### ⏱️ Runs, timers & the contest
-- Run timer, per-biome splits and personal bests (`/shiny splits`).
-- Miria's Contest countdown, with warnings at the minutes you choose while it's still incomplete.
-- Safari Manager guard: refuses the manager click until your whole party is there (sneak to bypass).
-- Quest prompts: with chat open, a click anywhere presses the quest's **Accept** button for you — exactly what clicking the button does. Switch off under *Quest prompts*.
-
-### 👥 Party tools
-- **Party dex:** looks up each member's Sparkling Critterdex as they join and works out which sparklings the whole party already has.
-- `/sparkling <name>` shows any player's Hunting level, tickets, Safari Essence and sparklings.
-- Optional hotspot relay and automatic hotspot splitting across the party.
-- Shared timers (`!timer`) and downtime holds (`!dt`).
-- **Locations never go to party chat:** anything that would give away a position is shown only to you.
-
-### 🌍 Quality of life
-- **Reload chunks key:** does what F3+A does, without the chat message — and you can hold it to keep reloading. You'll be asked to pick a key the first time you launch.
-- Paintings are hidden inside the Critter Safari.
-- Movable, resizable HUD panels (`/shiny hud`), with [Firmament](https://modrinth.com/mod/firmament)'s JARVIS HUD editor supported.
-- Settings screen powered by MoulConfig, the same library Firmament uses.
-- Update notices: tells you in chat when a new version is out, with a link to it.
-
----
-
-## Installation
-
-1. **Install Fabric** for Minecraft **26.1.2** — use the [Fabric installer](https://fabricmc.net/use/installer/), or any launcher that supports Fabric (Prism, Modrinth App, MultiMC…).
-2. **Download these mods** and put them in your `mods` folder:
-
-   | Mod | Where to get it |
-   |---|---|
-   | **Shiny Hunter** | [Latest release](https://github.com/javabetter/ShinyHunter/releases/latest) — `ShinyHunter-v2.0-26.1.2.jar` |
-   | **Fabric API** | [Modrinth](https://modrinth.com/mod/fabric-api) |
-   | **Fabric Language Kotlin** | [Modrinth](https://modrinth.com/mod/fabric-language-kotlin) |
-
-   Your `mods` folder is inside your Minecraft folder (`.minecraft/mods` in the vanilla launcher; in Prism, right-click the instance → **Folder** → `minecraft/mods`).
-3. **Launch the game.** Shiny Hunter will ask you to pick a key for **Reload chunks** — press any key, or Esc to skip.
-4. **Join Hypixel Skyblock** and head to the Critter Safari. Type `/shiny` to open the settings.
-
-> Java 25 or newer is required, which Minecraft 26.1.2 already needs.
-
-**Updating:** delete the old `ShinyHunter v….jar` from your `mods` folder before adding the new one — two copies will stop the game from starting.
-
----
-
-## Commands
+# Commands
 
 | Command | What it does |
 |---|---|
-| `/shiny` | Open the settings |
+| `/shiny` | Opens the settings/config menu |
 | `/shiny help` | List every command |
-| `/shiny hud` | Drag and resize the HUD panels |
-| `/shiny togglehud` | Show or hide the HUD |
-| `/shiny reloadkey` | Pick the Reload chunks key |
-| `/sparkling` | Your own Hunting level, tickets, Safari Essence and sparklings |
-| `/sparkling <name>` | The same for another player (also `/shiny dex <name>`) |
-| `/sparkling <a> <b> …` | Sparklings those players all have |
-| `/sparkling party` | Re-run the shared-sparklings check for your party |
-| `/shiny history [page]` | Every sparkling you've caught, newest first |
-| `/shiny splits` | This run's splits and your bests |
+| `/shiny hud` | Opens the HUD screen |
+| `/shiny togglehud` | Toggles the HUD on/off |
+| `/shiny reloadkey` | Set the keybind to reload chunks |
+| `/sparkling` | Check your tickets, sparklings, and hunting level |
+| `/sparkling <username>` | Check another player's tickets, sparklings, and hunting level |
+| `/sparkling party` | Check the shared sparklings of the party |
+| `/shiny history` | Shows all previous sparklings caught, with timestamps |
+| `/shiny splits` | Current run's splits (if applicable), and your personal bests |
 | `/shiny resetpb` | Clear your saved best times |
-| `/shiny hives` | What's known about each honeyhive |
-| `/shiny mark` · `/shiny waypoints` | Drop a waypoint ahead of you · clear waypoints |
-| `/shiny who` | Who the Safari Manager guard is counting |
 
-### Party chat commands
-Anyone in your party can type these; each one can be switched off in settings.
+# Party commands
 
-| Command | What it does |
+| Party Command | What it does |
 |---|---|
-| `!missing` · `!m [i\|f\|c\|h]` | What this run is still missing (optionally for one biome) |
-| `!shared` · `!shared all` | Sparklings the whole party already has |
-| `!shiny <name>` | A player's sparklings, posted to the party |
-| `!timer <length>` | Start a shared timer |
-| `!dt [reason]` | Hold the Safari Manager after this run until you say `r` |
+| `!missing`·`!m` | Says missing unique critters for current run. |
+| `!m <c/f/i/h>` | Says missing unique critter for a specific biome |
+| `!shared` | Says shared sparklings of the party |
+| `!shiny <username>` | Sends `/sparkling <username>` to party chat |
+| `!timer <time>` | Start a timer and send a message when it ends |
+| `!dt <reason>` | Display a downtime message when run ends, triggered when someone leaves the Critter Safari |
 
----
+# Other info
+## ⚠️Please note: use at your own risk!
+This mod should obey Hypixel's rules, but if it does not I am not responsible. If any features are in violation, please let me know and I will update the mod to remove or change them ASAP!
 
-## Fair play & privacy
-
-Shiny Hunter is built to only tell you what you could see or look up yourself:
-
-- **Only what you can see.** Alerts react to a nametag the game is drawing on your screen, or a mob in plain view — nothing behind you, out of nametag range, or hidden. Outlines and labels for mobs don't show through walls. The only markers drawn through walls are fixed scenery whose positions never change — bee nests, honeyhives and the Snoozling walls.
-- **No coordinates in alerts,** and no positions ever sent to party chat.
-- **Nothing happens without you.** The mod only sends what a player could: party-chat messages from the features you have switched on, and the quest Accept click when *you* click. Everything else stays on your screen.
-- **Your account is safe.** Shiny Hunter never asks for, reads or sends your login. Player lookups (`/sparkling`, party dex) go through the Shiny Hunter API, a small proxy that holds a Hypixel API key so you don't need one. It only ever sends a player's UUID (looked up from their name with Mojang), and only receives that player's public Critter Safari stats.
-- **Update notices.** When you join Hypixel, the mod reads the public GitHub releases page once to see if a newer version is out, and says so in chat with a link. Switch off under *Alerts → Update notices*.
-
-> ⚠️ **Use at your own risk.** Shiny Hunter is a third-party mod and is not affiliated with or endorsed by Hypixel or Mojang. Hypixel's rules on modifications apply; check them yourself and switch off any feature you're unsure about.
-
----
-
-## Building from source
-
-```bash
-git clone https://github.com/javabetter/ShinyHunter.git
-cd ShinyHunter
-./gradlew build
-```
-
-The jar appears in `build/libs/`. You'll need JDK 25.
-
-Player lookups use the proxy address set as `api_proxy_url` in `gradle.properties`; leave it blank to build without player lookups.
-
----
-
-## Credits
-
-Made by **GamingLegend123**, with **Claude**.
-Settings screen by [MoulConfig](https://github.com/NotEnoughUpdates/MoulConfig). HUD editing via [Firmament](https://github.com/nea89o/Firmament)'s JARVIS.
+## I am currently working to get a permanent Hypixel Developer API key.
+In the meantime, I get a new temporary one every 5 days. This means that there is a chance the mod's key may be stale for a short period until I switch it out. You won't need to update the mod, just message me on Discord (name is `javabetter') and I will change it as soon as I can!
 
 ## License
-
 [MIT](LICENSE)
