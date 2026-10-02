@@ -67,8 +67,5 @@ Shiny Hunter is a Critter Safari companion mod for Hypixel Skyblock! It includes
 ## ⚠️Please note: use at your own risk!
 This mod should obey Hypixel's rules, but if it does not I am not responsible. If any features are in violation, please let me know and I will update the mod to remove or change them ASAP!
 
-## I am currently working to get a permanent Hypixel Developer API key.
-In the meantime, I get a new temporary one every 5 days. This means that there is a chance the mod's key may be stale for a short period until I switch it out. You won't need to update the mod, just message me on Discord (name is `javabetter') and I will change it as soon as I can!
-
 ## License
 [MIT](LICENSE)
