@@ -577,9 +577,14 @@ public class ShinyMoulConfig extends Config {
         public String safariAssistRole = "";
 
         @Expose
-        @ConfigOption(name = "Other player", desc = "The other player's name: the inviter if you're the joiner, the joiner if you're the inviter.")
+        @ConfigOption(name = "Other player", desc = "The other player's name. Leave blank to pick it up automatically from who leaves / whose party you join.")
         @ConfigEditorText
         public String safariAssistPartner = "";
+
+        @Expose
+        @ConfigOption(name = "Delay (s)", desc = "Seconds to wait before each invite, transfer or party message.")
+        @ConfigEditorSlider(minValue = 0.0f, maxValue = 10.0f, minStep = 0.1f)
+        public double safariAssistDelaySeconds;
 
     }
 

@@ -122,6 +122,8 @@ public final class PartyDex {
         });
         ClientReceiveMessageEvents.CHAT.register(
                 (message, signed, sender, params, timestamp) -> handle(message));
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK
+                .register(client -> answerSharedIfReady());
     }
 
     // ------------------------------------------------------------------ chat
@@ -145,6 +147,7 @@ public final class PartyDex {
             }
             if (config.sharedCommand) {
                 handleSharedRequest(text);
+                noteSharedAnswer(text);
             }
             return;
         }
@@ -279,14 +282,24 @@ public final class PartyDex {
 
     // ------------------------------------------------------------------ lookups
 
+    /** Names with a lookup already running, so a waiting answer can't start the same one twice. */
+    private static final Set<String> IN_FLIGHT = new java.util.HashSet<>();
+
     private static void lookup(String name) {
         if (!HypixelApi.hasKey()) {
             tell("§cPlayer lookups aren't available§r — can't show " + name + "'s sparklings.");
             return;
         }
+        if (!IN_FLIGHT.add(name.toLowerCase())) {
+            return;
+        }
         Minecraft client = Minecraft.getInstance();
         HypixelApi.profiles(name).whenComplete((result, error) -> client.execute(() -> {
+            IN_FLIGHT.remove(name.toLowerCase());
             if (error != null) {
+                // A !shared answer can't be completed without this member; drop it rather than
+                // retrying forever.
+                pendingShared = null;
                 String reason = error.getCause() != null ? error.getCause().getMessage() : error.getMessage();
                 ShinyHunterClient.LOGGER.warn("Lookup failed for {}: {}", name, reason);
                 tell("§cCouldn't look up " + name + "§r — " + reason);
@@ -443,11 +456,27 @@ public final class PartyDex {
     /** Which !shared answer is owed once every member's dex is in, or null when none is. */
     private static String pendingShared;
 
+    /** Don't answer before this (wall-clock millis); gives another Shiny Hunter user time to. */
+    private static long sharedNotBefore;
+
+    /** When the last answer went out; repeat requests inside the cooldown are ignored. */
+    private static long lastSharedAnswer;
+
+    private static final long SHARED_COOLDOWN_MILLIS = 10_000L;
+
+    /** What every !shared answer starts with, so another client's answer can be recognised. */
+    private static final String SHARED_ANSWER_PREFIX = "Sparklings all ";
+
     /**
      * {@code !shared} lists the sparklings every member has, filtered to the ones worth knowing
-     * about; {@code !shared all} lists all of them. Only the requester's client answers, for the
-     * same reason as {@code !shiny}. If a member hasn't been looked up yet the answer waits for
-     * that lookup rather than reporting an intersection over half the party.
+     * about; {@code !shared all} lists all of them. Anyone in the party can ask, whether or not
+     * they have the mod.
+     *
+     * <p>If several members run Shiny Hunter they'd all answer, so only your own request is
+     * answered at once. For anyone else's, this client waits a moment (a different moment per
+     * player) and stays quiet if another client's answer shows up first. If a member hasn't been
+     * looked up yet the answer waits for that lookup rather than reporting an intersection over
+     * half the party.
      */
     private static void handleSharedRequest(String text) {
         Matcher relayed = HotspotAnnouncer.RELAYED_PUBLIC.matcher(text);
@@ -459,20 +488,47 @@ public final class PartyDex {
             return;
         }
         String sender = HotspotAnnouncer.senderOf(relayed.group(1));
-        if (sender == null || !sender.equalsIgnoreCase(self())) {
+        if (sender == null) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        if (now - lastSharedAnswer < SHARED_COOLDOWN_MILLIS) {
             return;
         }
         if (!HypixelApi.hasKey()) {
-            tell("§cPlayer lookups aren't available§r — can't answer !shared.");
+            if (sender.equalsIgnoreCase(self())) {
+                tell("§cPlayer lookups aren't available§r — can't answer !shared.");
+            }
             return;
         }
+        boolean mine = sender.equalsIgnoreCase(self());
+        // 1.5-3.5 s, fixed per player, so two clients answering someone else rarely collide.
+        sharedNotBefore = mine ? now : now + 1500 + Math.floorMod(self().toLowerCase().hashCode(), 2000);
         pendingShared = request.group(1) == null ? "useful" : "all";
         answerSharedIfReady();
     }
 
+    /** Another client already answered a !shared: drop ours rather than repeat it. */
+    private static void noteSharedAnswer(String text) {
+        if (pendingShared == null || !text.contains("Party >")) {
+            return;
+        }
+        Matcher relayed = HotspotAnnouncer.RELAYED_PUBLIC.matcher(text);
+        if (!relayed.find()) {
+            return;
+        }
+        String sender = HotspotAnnouncer.senderOf(relayed.group(1));
+        if (sender != null && !sender.equalsIgnoreCase(self())
+                && relayed.group(2).trim().startsWith(SHARED_ANSWER_PREFIX)) {
+            pendingShared = null;
+            lastSharedAnswer = System.currentTimeMillis();
+            ShinyHunterClient.LOGGER.info("!shared already answered by {}", sender);
+        }
+    }
+
     /** Answers a waiting !shared once every member's dex is held, looking up any that aren't. */
     private static void answerSharedIfReady() {
-        if (pendingShared == null) {
+        if (pendingShared == null || System.currentTimeMillis() < sharedNotBefore) {
             return;
         }
         boolean waiting = false;
@@ -493,6 +549,7 @@ public final class PartyDex {
 
         boolean all = "all".equals(pendingShared);
         pendingShared = null;
+        lastSharedAnswer = System.currentTimeMillis();
         ShinyConfig config = ShinyConfig.get();
         int players = MEMBERS.size() + 1;
 
@@ -510,14 +567,14 @@ public final class PartyDex {
                 : everything.size() + " shared (" + shared.size() + " useful)";
 
         if (shared.isEmpty()) {
-            PartyChat.send(config.critterChannel, "Sparklings all " + players + " players have: "
+            PartyChat.send(config.critterChannel, SHARED_ANSWER_PREFIX + players + " players have: "
                     + count + (all ? "." : " - none of the useful ones."));
             return;
         }
         int max = Math.max(1, config.sharedListMax);
         List<String> shown = shared.size() > max ? shared.subList(0, max) : shared;
         String tail = shared.size() > max ? " (+" + (shared.size() - max) + " more)" : "";
-        PartyChat.send(config.critterChannel, "Sparklings all " + players + " players have, "
+        PartyChat.send(config.critterChannel, SHARED_ANSWER_PREFIX + players + " players have, "
                 + count + ": " + String.join(", ", shown) + tail);
     }
 

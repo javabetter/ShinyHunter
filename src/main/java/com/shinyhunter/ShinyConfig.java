@@ -47,8 +47,11 @@ public final class ShinyConfig {
      */
     public String safariAssistRole = "none";
 
-    /** The other player's account name for Safari Join Assist. */
+    /** The other player's account name for Safari Join Assist. Blank = learn it from party messages. */
     public String safariAssistPartner = "";
+
+    /** Seconds Safari Join Assist waits before each action. */
+    public double safariAssistDelaySeconds = 0.5;
 
     /** Master switch. {@code /shinyhunter toggle}. */
     public boolean enabled = true;

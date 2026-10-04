@@ -359,8 +359,10 @@ public class ConfigScreen extends Screen {
         section("Safari Join Assist");
         text("Your role", "none / joiner (enters the Safari, then warps the party) / inviter (invites them back, gives leader).",
                 () -> c.safariAssistRole, v -> c.safariAssistRole = v);
-        text("Other player", "The other player's name: the inviter if you're the joiner, the joiner if you're the inviter.",
+        text("Other player", "The other player's name. Leave blank to pick it up automatically from who leaves / whose party you join.",
                 () -> c.safariAssistPartner, v -> c.safariAssistPartner = v);
+        decimal("Delay (s)", "Seconds to wait before each invite, transfer or party message.",
+                () -> c.safariAssistDelaySeconds, v -> c.safariAssistDelaySeconds = v, 0.0, 10.0);
 
         section("Rockmites");
         bool("Track rockmites", "Count mounds opened and Rockmites found.",

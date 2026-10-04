@@ -1,9 +1,12 @@
 package com.shinyhunter;
 
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -12,7 +15,7 @@ import java.util.regex.Pattern;
  *
  * <p>The trick: player 1 (the "joiner") leaves the party, enters a Safari instance, gets invited
  * back by player 2 (the "inviter"), is handed party leader, and warps the party to their instance.
- * Each player sets their own role and the other player's name; then:
+ * Each player sets their own role; then:
  * <ul>
  *   <li><b>Inviter</b>: when the joiner leaves → {@code /party invite <joiner>}; when the joiner
  *       joins → {@code /party transfer <joiner>}; when the joiner becomes leader → {@code !w} in
@@ -20,8 +23,17 @@ import java.util.regex.Pattern;
  *   <li><b>Joiner</b>: on joining the inviter's party → {@code !pt} in party chat, then
  *       {@code !warp} — the latter only while in the Critter Safari.</li>
  * </ul>
- * Everything goes through {@link PartyChat}'s queue, so the lines are spaced like any other.
- * Only Hypixel's own system lines trigger it, never party chat, so nobody can set it off by typing.
+ *
+ * <p><b>The other player's name is optional.</b> Left blank, it's learned: the inviter takes
+ * whoever just left the party as the joiner, and the joiner takes whoever's party they just
+ * joined as the inviter. A typed name pins it to that one player instead.
+ *
+ * <p>A joiner who is party leader when they leave doesn't produce "has left the party" — Hypixel
+ * says "The party was transferred to X because Y left" instead, so both count as leaving.
+ *
+ * <p>Actions wait the configured delay, then go through {@link PartyChat}'s queue so they're spaced
+ * like any other line. Only Hypixel's own system lines trigger it, never party chat, so nobody can
+ * set it off by typing.
  */
 public final class SafariJoinAssist {
 
@@ -34,8 +46,20 @@ public final class SafariJoinAssist {
     private static final Pattern LEFT = Pattern.compile(
             "^(.+?) (?:has left the party|has been removed from the party|was removed from your party"
                     + " because they disconnected)\\.?$");
+    /** The leader leaving: {@code The party was transferred to [MVP+] Me because [MVP+] John left} */
+    private static final Pattern LEADER_LEFT = Pattern.compile(
+            "^The party was transferred to .+? because (.+?) left\\.?$");
     /** {@code The party was transferred to [MVP+] John by [VIP] Me} */
     private static final Pattern TRANSFERRED = Pattern.compile("^The party was transferred to (.+?) by .+$");
+
+    /** An action waiting out the configured delay. */
+    private record Pending(long dueAt, String what, String channel, String line) {
+    }
+
+    private static final List<Pending> PENDING = new ArrayList<>();
+
+    /** The other player as learned from party messages, when no name is configured. */
+    private static String learnedPartner;
 
     private SafariJoinAssist() {
     }
@@ -46,13 +70,13 @@ public final class SafariJoinAssist {
                 handle(message);
             }
         });
+        ClientTickEvents.END_CLIENT_TICK.register(client -> drain());
     }
 
     private static void handle(Component message) {
         ShinyConfig config = ShinyConfig.get();
         String role = role(config);
-        String partner = config.safariAssistPartner == null ? "" : config.safariAssistPartner.trim();
-        if (role.equals(ROLE_NONE) || partner.isEmpty()) {
+        if (role.equals(ROLE_NONE)) {
             return;
         }
         String text = EntityDataProbe.stripFormatting(message.getString()).trim();
@@ -61,35 +85,88 @@ public final class SafariJoinAssist {
         }
 
         if (role.equals(ROLE_INVITER)) {
-            if (isPartner(LEFT.matcher(text), partner)) {
-                act("invite", "party", "invite " + partner);
-            } else if (isPartner(JOINED.matcher(text), partner)) {
-                act("transfer", "party", "transfer " + partner);
-            } else if (isPartner(TRANSFERRED.matcher(text), partner)) {
-                act("warp request", "pc", "!w");
+            String leaver = nameFrom(LEFT.matcher(text));
+            if (leaver == null) {
+                leaver = nameFrom(LEADER_LEFT.matcher(text));
+            }
+            if (leaver != null && !leaver.equalsIgnoreCase(self()) && accepts(config, leaver, true)) {
+                schedule(config, "invite", "party", "invite " + leaver);
+                return;
+            }
+            String joiner = nameFrom(JOINED.matcher(text));
+            if (joiner != null && isPartner(config, joiner)) {
+                schedule(config, "transfer", "party", "transfer " + joiner);
+                return;
+            }
+            String leader = nameFrom(TRANSFERRED.matcher(text));
+            if (leader != null && isPartner(config, leader)) {
+                schedule(config, "warp request", "pc", "!w");
             }
         } else if (role.equals(ROLE_JOINER)) {
-            if (isPartner(WE_JOINED.matcher(text), partner)) {
-                act("leader request", "pc", "!pt");
+            String host = nameFrom(WE_JOINED.matcher(text));
+            if (host != null && accepts(config, host, true)) {
+                schedule(config, "leader request", "pc", "!pt");
                 Minecraft client = Minecraft.getInstance();
                 if (SkyblockSidebar.isAtOrWithin(client, config.huntLocation)) {
-                    act("warp", "pc", "!warp");
+                    schedule(config, "warp", "pc", "!warp");
                 }
             }
         }
     }
 
-    private static boolean isPartner(Matcher matcher, String partner) {
-        if (!matcher.matches()) {
-            return false;
+    /**
+     * Whether this player is the other half of the trick. With a configured name only that player
+     * is; with none, {@code learn} makes this player the partner from now on.
+     */
+    private static boolean accepts(ShinyConfig config, String name, boolean learn) {
+        String configured = configuredPartner(config);
+        if (!configured.isEmpty()) {
+            return name.equalsIgnoreCase(configured);
         }
-        String name = PartyDex.nameIn(matcher.group(1));
-        return name != null && name.equalsIgnoreCase(partner);
+        if (learn) {
+            learnedPartner = name;
+            ShinyHunterClient.LOGGER.info("Safari Join Assist: partner is now {}", name);
+        }
+        return true;
     }
 
-    private static void act(String what, String channel, String line) {
-        ShinyHunterClient.LOGGER.info("Safari Join Assist: {} -> /{} {}", what, channel, line);
-        PartyChat.send(channel, line);
+    /** The configured partner, or the learned one when none is configured. */
+    private static boolean isPartner(ShinyConfig config, String name) {
+        String configured = configuredPartner(config);
+        String partner = configured.isEmpty() ? learnedPartner : configured;
+        return partner != null && name.equalsIgnoreCase(partner);
+    }
+
+    private static String configuredPartner(ShinyConfig config) {
+        return config.safariAssistPartner == null ? "" : config.safariAssistPartner.trim();
+    }
+
+    private static String nameFrom(Matcher matcher) {
+        return matcher.matches() ? PartyDex.nameIn(matcher.group(1)) : null;
+    }
+
+    private static String self() {
+        Minecraft client = Minecraft.getInstance();
+        return client.player == null ? "" : client.player.getName().getString();
+    }
+
+    private static void schedule(ShinyConfig config, String what, String channel, String line) {
+        long delay = Math.max(0, Math.round(config.safariAssistDelaySeconds * 1000));
+        // Later actions keep their order behind earlier ones.
+        long due = System.currentTimeMillis() + delay;
+        if (!PENDING.isEmpty()) {
+            due = Math.max(due, PENDING.get(PENDING.size() - 1).dueAt());
+        }
+        PENDING.add(new Pending(due, what, channel, line));
+    }
+
+    private static void drain() {
+        long now = System.currentTimeMillis();
+        while (!PENDING.isEmpty() && PENDING.get(0).dueAt() <= now) {
+            Pending next = PENDING.remove(0);
+            ShinyHunterClient.LOGGER.info("Safari Join Assist: {} -> /{} {}", next.what(), next.channel(), next.line());
+            PartyChat.send(next.channel(), next.line());
+        }
     }
 
     /** The configured role, normalised; anything unrecognised is "none". */
