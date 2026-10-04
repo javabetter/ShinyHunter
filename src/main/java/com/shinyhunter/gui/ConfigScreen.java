@@ -337,6 +337,8 @@ public class ConfigScreen extends Screen {
                 () -> c.contestScope, v -> c.contestScope = v);
         bool("Show timer", "Show the time left until the contest ends.",
                 () -> c.showContestTimer, v -> c.showContestTimer = v);
+        bool("Announce ticket earned", "Say \"Ticket earned!\" in party chat when the contest reaches Uncommon or higher.",
+                () -> c.announceTicketEarned, v -> c.announceTicketEarned = v);
         bool("Warn if incomplete", "Ring at each mark below while the contest is not complete.",
                 () -> c.contestWarnEnabled, v -> c.contestWarnEnabled = v);
         text("Warn at (minutes)", "Minutes-left marks to ring at, e.g. 5, 3, 1.",
@@ -353,6 +355,12 @@ public class ConfigScreen extends Screen {
                 () -> c.snoozlingWallWaypoints, v -> c.snoozlingWallWaypoints = v);
         text("Wall waypoint colour", "Hex colour, e.g. FF55FF.",
                 () -> c.snoozlingWallColor, v -> c.snoozlingWallColor = v);
+
+        section("Safari Join Assist");
+        text("Your role", "none / joiner (enters the Safari, then warps the party) / inviter (invites them back, gives leader).",
+                () -> c.safariAssistRole, v -> c.safariAssistRole = v);
+        text("Other player", "The other player's name: the inviter if you're the joiner, the joiner if you're the inviter.",
+                () -> c.safariAssistPartner, v -> c.safariAssistPartner = v);
 
         section("Rockmites");
         bool("Track rockmites", "Count mounds opened and Rockmites found.",

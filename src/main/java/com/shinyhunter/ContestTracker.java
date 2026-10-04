@@ -91,6 +91,12 @@ public final class ContestTracker {
 
     private static boolean complete;
 
+    /**
+     * Set once this window has been seen below Uncommon. "Ticket earned!" is only announced on a
+     * change seen happen, never for a contest that was already done when you logged in.
+     */
+    private static boolean seenIncomplete;
+
     /** Minute marks already rung this window, so each rings once. */
     private static final Set<Integer> WARNED = new LinkedHashSet<>();
 
@@ -132,6 +138,7 @@ public final class ContestTracker {
             boolean first = windowKey == -1;
             windowKey = key;
             complete = false;
+            seenIncomplete = false;
             WARNED.clear();
             if (!first) {
                 ShinyHunterClient.LOGGER.info("Contest window rolled at {} — status reset", now);
@@ -181,6 +188,11 @@ public final class ContestTracker {
             complete = true;
             ShinyHunterClient.LOGGER.info("Contest complete — {} with {}", tier, points);
             Debug.log("contest complete:", tier, "with", points);
+            if (seenIncomplete && config.announceTicketEarned) {
+                PartyChat.send(config.critterChannel, "Ticket earned!");
+            }
+        } else {
+            seenIncomplete = true;
         }
     }
 

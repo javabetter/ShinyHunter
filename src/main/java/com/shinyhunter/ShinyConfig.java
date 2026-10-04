@@ -38,6 +38,18 @@ public final class ShinyConfig {
     /** On joining Hypixel, say so in chat if a newer Shiny Hunter release is out on GitHub. */
     public boolean checkForUpdates = true;
 
+    /** Say "Ticket earned!" in party chat when Miria's Contest reaches Uncommon or higher. */
+    public boolean announceTicketEarned = false;
+
+    /**
+     * Safari Join Assist role: "none", "joiner" (player 1, who enters the Safari and warps the
+     * party there) or "inviter" (player 2, who invites the joiner back and hands over leader).
+     */
+    public String safariAssistRole = "none";
+
+    /** The other player's account name for Safari Join Assist. */
+    public String safariAssistPartner = "";
+
     /** Master switch. {@code /shinyhunter toggle}. */
     public boolean enabled = true;
 

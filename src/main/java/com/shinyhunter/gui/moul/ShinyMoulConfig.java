@@ -88,6 +88,10 @@ public class ShinyMoulConfig extends Config {
     public SnoozlingWallsCategory snoozlingWalls = new SnoozlingWallsCategory();
 
     @Expose
+    @Category(name = "Safari Join Assist", desc = "Safari Join Assist")
+    public SafariJoinAssistCategory safariJoinAssist = new SafariJoinAssistCategory();
+
+    @Expose
     @Category(name = "Rockmites", desc = "Rockmites")
     public RockmitesCategory rockmites = new RockmitesCategory();
 
@@ -515,6 +519,11 @@ public class ShinyMoulConfig extends Config {
         public boolean showContestTimer;
 
         @Expose
+        @ConfigOption(name = "Announce ticket earned", desc = "Say \"Ticket earned!\" in party chat when the contest reaches Uncommon or higher.")
+        @ConfigEditorBoolean
+        public boolean announceTicketEarned;
+
+        @Expose
         @ConfigOption(name = "Warn if incomplete", desc = "Ring at each mark below while the contest is not complete.")
         @ConfigEditorBoolean
         public boolean contestWarnEnabled;
@@ -557,6 +566,20 @@ public class ShinyMoulConfig extends Config {
         @ConfigOption(name = "Snoozling walls list", desc = "Open the list editor for snoozling walls.")
         @ConfigEditorButton(runnableId = 4, buttonText = "Edit")
         public boolean openSnoozlingWalls = false;
+
+    }
+
+    public static class SafariJoinAssistCategory {
+
+        @Expose
+        @ConfigOption(name = "Your role", desc = "none / joiner (enters the Safari, then warps the party) / inviter (invites them back, gives leader).")
+        @ConfigEditorText
+        public String safariAssistRole = "";
+
+        @Expose
+        @ConfigOption(name = "Other player", desc = "The other player's name: the inviter if you're the joiner, the joiner if you're the inviter.")
+        @ConfigEditorText
+        public String safariAssistPartner = "";
 
     }
 
