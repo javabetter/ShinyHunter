@@ -134,4 +134,48 @@ public final class CritterDex {
         }
         return null;
     }
+
+    // ------------------------------------------------------------------ rarity
+
+    /** Hypixel's rarity tiers, lowest first, with the colour Hypixel gives each. */
+    public enum Rarity {
+        COMMON("§f"), UNCOMMON("§a"), RARE("§9"), EPIC("§5"), LEGENDARY("§6");
+
+        public final String colour;
+
+        Rarity(String colour) {
+            this.colour = colour;
+        }
+    }
+
+    /**
+     * Each critter's rarity, read off the colour Hypixel gives its name in capture lines — taken
+     * from thousands of real captures in the user's logs (2026-10-08), every critter consistent.
+     */
+    private static final Map<String, Rarity> RARITY = new LinkedHashMap<>();
+
+    static {
+        for (String c : List.of("Cavernfish", "Flitter", "Foxtrot", "Shyworm", "Strongarm", "Tepid")) {
+            RARITY.put(c, Rarity.COMMON);
+        }
+        for (String c : List.of("Areita", "Bloodbat", "Bluebird", "Driftling", "Duplico", "Gazer",
+                "Honeybug", "Litterbug", "Polaris", "Shuddersquid", "Solsnatcher", "Treefrog", "Woodchucker")) {
+            RARITY.put(c, Rarity.UNCOMMON);
+        }
+        for (String c : List.of("Billygoat", "Chuckwalla", "Fluffling", "Gimmiegold", "Hideonfloor",
+                "Hideonwall", "Hideyho", "Mantis Shrimp", "Nozzlenose", "Parakeet", "Rockmite", "Scrappy",
+                "Snoozle", "Troodon")) {
+            RARITY.put(c, Rarity.RARE);
+        }
+        RARITY.put("Gemzie", Rarity.EPIC);
+        for (String c : List.of("Doomspiral", "Macaw", "Wumpa")) {
+            RARITY.put(c, Rarity.LEGENDARY);
+        }
+    }
+
+    /** The critter's rarity; an unknown name counts as Common. */
+    public static Rarity rarityOf(String critter) {
+        String name = canonical(critter);
+        return RARITY.getOrDefault(name == null ? critter : name, Rarity.COMMON);
+    }
 }

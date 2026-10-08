@@ -38,6 +38,21 @@ public final class ShinyConfig {
     /** On joining Hypixel, say so in chat if a newer Shiny Hunter release is out on GitHub. */
     public boolean checkForUpdates = true;
 
+    /** Count Safari tickets used since your last sparkling, for the HUD and history. */
+    public boolean trackTicketsSinceSparkling = true;
+
+    /** Tickets used since your last sparkling. Counted from the Safari Manager's ticket lines. */
+    public int ticketsSinceSparkling = 0;
+
+    /** Keep count of Miria's Contest rewards waiting to be claimed. */
+    public boolean trackUnclaimedContests = true;
+
+    /** Unclaimed contest rewards; -1 until the contest menu has been opened once to read it. */
+    public int unclaimedContests = -1;
+
+    /** Warn in chat and with a title at this many unclaimed contests. */
+    public int unclaimedContestWarnAt = 25;
+
     /** Say "Ticket earned!" in party chat when Miria's Contest reaches Uncommon or higher. */
     public boolean announceTicketEarned = false;
 
@@ -446,12 +461,21 @@ public final class ShinyConfig {
     public int sharedListMax = 15;
 
     /**
-     * The sparklings worth skipping — the ones {@code !shared} (without "all") reports. Names are
-     * matched loosely, so plurals and casing don't matter.
+     * The sparklings worth skipping — the ones {@code !shared} (without "all") reports — as
+     * comma-separated names, editable in-game. Matched loosely, so plurals and casing don't matter.
      */
-    public List<String> usefulSparklings = new ArrayList<>(List.of(
+    public String usefulSparklingCritters = DEFAULT_USEFUL_SPARKLINGS;
+
+    public static final String DEFAULT_USEFUL_SPARKLINGS = "Macaw, Bluebird, Parakeet, Wumpa, Doomspiral, "
+            + "Hideyho, Rockmite, Snoozle, Gemzie, Honeybug, Gimmiegold, Gazer";
+
+    /** The list as it used to be stored (before 2.5). Read once to migrate, then dropped. */
+    public List<String> usefulSparklings = null;
+
+    /** The old built-in list; a config still holding exactly this gets the new default instead. */
+    private static final List<String> OLD_USEFUL_SPARKLINGS = List.of(
             "Honeybug", "Parakeet", "Bluebird", "Macaw", "Rockmite",
-            "Snoozle", "Gemzie", "Gazer", "Wumpa", "Doomspiral"));
+            "Snoozle", "Gemzie", "Gazer", "Wumpa", "Doomspiral");
 
     /**
      * Dotted path to the Sparkling Critterdex inside a profile member. Confirmed against a live
@@ -986,10 +1010,16 @@ public final class ShinyConfig {
                     loaded.particleRadius = Math.clamp(loaded.particleRadius, 0.5, 16.0);
                     loaded.particleThreshold = Math.clamp(loaded.particleThreshold, 1, 500);
                     loaded.particleWindowSeconds = Math.clamp(loaded.particleWindowSeconds, 1, 5);
-                    if (loaded.usefulSparklings == null) {
-                        loaded.usefulSparklings = new ArrayList<>(List.of(
-                                "Honeybug", "Parakeet", "Bluebird", "Macaw", "Rockmite",
-                                "Snoozle", "Gemzie", "Gazer", "Wumpa", "Doomspiral"));
+                    // The old list field: a customised list carries over; the old default is replaced
+                    // by the new one. Either way the old field is dropped from the file after this.
+                    if (loaded.usefulSparklings != null) {
+                        if (!loaded.usefulSparklings.equals(OLD_USEFUL_SPARKLINGS)) {
+                            loaded.usefulSparklingCritters = String.join(", ", loaded.usefulSparklings);
+                        }
+                        loaded.usefulSparklings = null;
+                    }
+                    if (loaded.usefulSparklingCritters == null) {
+                        loaded.usefulSparklingCritters = DEFAULT_USEFUL_SPARKLINGS;
                     }
                     if (loaded.sparklingDexPath == null) {
                         loaded.sparklingDexPath = "safari.discovered_sparkling_critters";

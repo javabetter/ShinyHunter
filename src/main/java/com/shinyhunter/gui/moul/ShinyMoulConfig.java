@@ -76,6 +76,10 @@ public class ShinyMoulConfig extends Config {
     public CrittersCategory critters = new CrittersCategory();
 
     @Expose
+    @Category(name = "Sparkling luck", desc = "Sparkling luck")
+    public SparklingLuckCategory sparklingLuck = new SparklingLuckCategory();
+
+    @Expose
     @Category(name = "Party sparklings", desc = "Party sparklings")
     public PartySparklingsCategory partySparklings = new PartySparklingsCategory();
 
@@ -462,6 +466,20 @@ public class ShinyMoulConfig extends Config {
 
     }
 
+    public static class SparklingLuckCategory {
+
+        @Expose
+        @ConfigOption(name = "Tickets since sparkling", desc = "Count Safari tickets used since your last sparkling (HUD, chat on a catch, history hover).")
+        @ConfigEditorBoolean
+        public boolean trackTicketsSinceSparkling;
+
+        @Expose
+        @ConfigOption(name = "Tickets so far", desc = "Tickets used since your last sparkling. Set it by hand if you know it.")
+        @ConfigEditorSlider(minValue = 0f, maxValue = 100000f, minStep = 1f)
+        public int ticketsSinceSparkling;
+
+    }
+
     public static class PartySparklingsCategory {
 
         @Expose
@@ -494,6 +512,11 @@ public class ShinyMoulConfig extends Config {
         @ConfigEditorSlider(minValue = 1f, maxValue = 37f, minStep = 1f)
         public int sharedListMax;
 
+        @Expose
+        @ConfigOption(name = "Useful sparklings", desc = "Comma-separated critters !shared reports (e.g. Macaw, Gemzie); !shared all ignores it.")
+        @ConfigEditorText
+        public String usefulSparklingCritters = "";
+
     }
 
     public static class MiriaSContestCategory {
@@ -517,6 +540,16 @@ public class ShinyMoulConfig extends Config {
         @ConfigOption(name = "Show timer", desc = "Show the time left until the contest ends.")
         @ConfigEditorBoolean
         public boolean showContestTimer;
+
+        @Expose
+        @ConfigOption(name = "Count unclaimed contests", desc = "HUD count of contest rewards waiting to be claimed. Open the contest menu once to set it up.")
+        @ConfigEditorBoolean
+        public boolean trackUnclaimedContests;
+
+        @Expose
+        @ConfigOption(name = "Warn at unclaimed", desc = "Warn with a title and in chat at this many unclaimed contests.")
+        @ConfigEditorSlider(minValue = 1f, maxValue = 500f, minStep = 1f)
+        public int unclaimedContestWarnAt;
 
         @Expose
         @ConfigOption(name = "Announce ticket earned", desc = "Say \"Ticket earned!\" in party chat when the contest reaches Uncommon or higher.")

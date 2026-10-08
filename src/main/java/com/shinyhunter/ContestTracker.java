@@ -188,8 +188,13 @@ public final class ContestTracker {
             complete = true;
             ShinyHunterClient.LOGGER.info("Contest complete — {} with {}", tier, points);
             Debug.log("contest complete:", tier, "with", points);
-            if (seenIncomplete && config.announceTicketEarned) {
-                PartyChat.send(config.critterChannel, "Ticket earned!");
+            // Only a completion seen happen counts: relogging into an already-done contest
+            // mustn't announce or count it again.
+            if (seenIncomplete) {
+                if (config.announceTicketEarned) {
+                    PartyChat.send(config.critterChannel, "Ticket earned!");
+                }
+                ContestClaims.onContestCompleted();
             }
         } else {
             seenIncomplete = true;

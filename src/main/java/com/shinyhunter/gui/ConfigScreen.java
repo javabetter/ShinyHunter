@@ -304,6 +304,12 @@ public class ConfigScreen extends Screen {
                 () -> c.hideNestsWhenDone, v -> c.hideNestsWhenDone = v);
         text("Nest done colour", "Outline colour for nests after that critter is caught, e.g. FF4040.",
                 () -> c.beeNestDoneColor, v -> c.beeNestDoneColor = v);
+        section("Sparkling luck");
+        bool("Tickets since sparkling", "Count Safari tickets used since your last sparkling (HUD, chat on a catch, history hover).",
+                () -> c.trackTicketsSinceSparkling, v -> c.trackTicketsSinceSparkling = v);
+        number("Tickets so far", "Tickets used since your last sparkling. Set it by hand if you know it.",
+                () -> c.ticketsSinceSparkling, v -> c.ticketsSinceSparkling = v, 0, 100000);
+
         section("Party sparklings");
         bool("Party dex", "Look up each member's Sparkling Critterdex as they join.",
                 () -> c.partyDexEnabled, v -> c.partyDexEnabled = v);
@@ -317,16 +323,8 @@ public class ConfigScreen extends Screen {
                 () -> c.sparklingDexPath, v -> c.sparklingDexPath = v);
         number("!shared max", "Most sparklings !shared lists before \"+N more\".",
                 () -> c.sharedListMax, v -> c.sharedListMax = v, 1, 37);
-        text("Useful sparklings", "Comma-separated list !shared reports; !shared all ignores it.",
-                () -> String.join(", ", c.usefulSparklings),
-                v -> {
-                    c.usefulSparklings.clear();
-                    for (String part : v.split(",")) {
-                        if (!part.trim().isEmpty()) {
-                            c.usefulSparklings.add(part.trim());
-                        }
-                    }
-                });
+        text("Useful sparklings", "Comma-separated critters !shared reports (e.g. Macaw, Gemzie); !shared all ignores it.",
+                () -> c.usefulSparklingCritters, v -> c.usefulSparklingCritters = v);
 
         section("Miria's Contest");
         bool("Track contest", "Show whether this window's contest is complete.",
@@ -337,6 +335,10 @@ public class ConfigScreen extends Screen {
                 () -> c.contestScope, v -> c.contestScope = v);
         bool("Show timer", "Show the time left until the contest ends.",
                 () -> c.showContestTimer, v -> c.showContestTimer = v);
+        bool("Count unclaimed contests", "HUD count of contest rewards waiting to be claimed. Open the contest menu once to set it up.",
+                () -> c.trackUnclaimedContests, v -> c.trackUnclaimedContests = v);
+        number("Warn at unclaimed", "Warn with a title and in chat at this many unclaimed contests.",
+                () -> c.unclaimedContestWarnAt, v -> c.unclaimedContestWarnAt = v, 1, 500);
         bool("Announce ticket earned", "Say \"Ticket earned!\" in party chat when the contest reaches Uncommon or higher.",
                 () -> c.announceTicketEarned, v -> c.announceTicketEarned = v);
         bool("Warn if incomplete", "Ring at each mark below while the contest is not complete.",

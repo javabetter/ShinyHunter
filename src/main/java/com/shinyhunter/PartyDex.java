@@ -328,14 +328,16 @@ public final class PartyDex {
         }
         MutableComponent hover = Component.literal("");
         hover.append(Component.literal("Sparklings caught (" + dex.caught().size() + ")\n")
-                .withStyle(ChatFormatting.GREEN));
-        hover.append(Component.literal(dex.caught().isEmpty() ? "none\n" : String.join(", ", dex.caught()) + "\n")
-                .withStyle(ChatFormatting.GRAY));
+                .withStyle(ChatFormatting.GREEN, ChatFormatting.BOLD));
+        hover.append(dex.caught().isEmpty()
+                ? Component.literal("none\n").withStyle(ChatFormatting.GRAY)
+                : biomeColumns(dex.caught()));
         List<String> missing = dex.missing();
         hover.append(Component.literal("\nStill needed (" + missing.size() + ")\n")
-                .withStyle(ChatFormatting.RED));
-        hover.append(Component.literal(missing.isEmpty() ? "none" : String.join(", ", missing))
-                .withStyle(ChatFormatting.GRAY));
+                .withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
+        hover.append(missing.isEmpty()
+                ? Component.literal("none").withStyle(ChatFormatting.GRAY)
+                : biomeColumns(missing));
         if (dex.dexPath().isEmpty()) {
             hover.append(Component.literal("\n\nNo Sparkling Critterdex found in this profile — run /shiny dex "
                     + dex.name()).withStyle(ChatFormatting.DARK_GRAY));
@@ -364,6 +366,80 @@ public final class PartyDex {
                     .withStyle(style -> style.withHoverEvent(new HoverEvent.ShowText(hover))));
         }
         client.player.sendSystemMessage(Component.literal("§b§m                    "));
+    }
+
+    /** Biome header colours, matching Hypixel's own milestone messages. */
+    private static final Map<String, String> BIOME_COLOURS = Map.of(
+            "Forest", "§2", "Cavern", "§6", "Icy", "§9", "Haunted", "§5");
+
+    /** Gap between columns, in pixels. */
+    private static final int COLUMN_GAP = 10;
+
+    /**
+     * The critters as a table: one labelled column per biome, each listed rarest first and
+     * coloured by rarity. Chat text isn't monospaced, so columns are lined up by measuring each
+     * cell's real width in the game's font and padding with spaces.
+     */
+    private static Component biomeColumns(java.util.Collection<String> critters) {
+        net.minecraft.client.gui.Font font = Minecraft.getInstance().font;
+        int space = Math.max(1, font.width(" "));
+        List<String> biomes = CritterDex.biomes();
+
+        List<List<String>> columns = new ArrayList<>();
+        for (String biome : biomes) {
+            List<String> column = new ArrayList<>();
+            for (String critter : critters) {
+                if (biome.equalsIgnoreCase(CritterDex.biomeOf(critter))) {
+                    column.add(critter);
+                }
+            }
+            column.sort(java.util.Comparator
+                    .comparing((String c) -> CritterDex.rarityOf(c)).reversed()
+                    .thenComparing(String::compareToIgnoreCase));
+            columns.add(column);
+        }
+
+        // Header and cells as components, so widths include bold and colour exactly as drawn.
+        List<Component> headers = new ArrayList<>();
+        int[] widths = new int[biomes.size()];
+        int rows = 0;
+        for (int i = 0; i < biomes.size(); i++) {
+            String biome = biomes.get(i);
+            Component header = Component.literal(BIOME_COLOURS.getOrDefault(biome, "§f") + "§l" + biome
+                    + " (" + columns.get(i).size() + ")");
+            headers.add(header);
+            widths[i] = font.width(header);
+            for (String critter : columns.get(i)) {
+                widths[i] = Math.max(widths[i], font.width(critter));
+            }
+            rows = Math.max(rows, columns.get(i).size());
+        }
+
+        MutableComponent table = Component.literal("");
+        appendRow(table, headers, widths, space, font);
+        for (int row = 0; row < rows; row++) {
+            List<Component> cells = new ArrayList<>();
+            for (List<String> column : columns) {
+                cells.add(row < column.size()
+                        ? Component.literal(CritterDex.rarityOf(column.get(row)).colour + column.get(row))
+                        : Component.literal(""));
+            }
+            appendRow(table, cells, widths, space, font);
+        }
+        return table;
+    }
+
+    private static void appendRow(MutableComponent table, List<Component> cells, int[] widths, int space,
+                                  net.minecraft.client.gui.Font font) {
+        for (int i = 0; i < cells.size(); i++) {
+            Component cell = cells.get(i);
+            table.append(cell);
+            if (i < cells.size() - 1) {
+                int pad = widths[i] + COLUMN_GAP - font.width(cell);
+                table.append(Component.literal(" ".repeat(Math.max(1, Math.round((float) pad / space)))));
+            }
+        }
+        table.append(Component.literal("\n"));
     }
 
     private static void addIfPresent(List<Component> lines, String line) {
@@ -584,7 +660,8 @@ public final class PartyDex {
      */
     private static Set<String> usefulSparklings(ShinyConfig config) {
         Set<String> useful = new LinkedHashSet<>();
-        for (String entry : config.usefulSparklings) {
+        String list = config.usefulSparklingCritters == null ? "" : config.usefulSparklingCritters;
+        for (String entry : list.split(",")) {
             String canonical = looseCritter(entry);
             if (canonical != null) {
                 useful.add(canonical);

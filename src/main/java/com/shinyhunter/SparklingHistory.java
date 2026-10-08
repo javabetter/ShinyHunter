@@ -72,7 +72,7 @@ public final class SparklingHistory {
 
     /** The full moment, shown when the date is hovered. */
     private static final DateTimeFormatter TIMESTAMP =
-            DateTimeFormatter.ofPattern("EEEE, MMM dd yyyy 'at' h:mm:ss a", Locale.ENGLISH);
+            DateTimeFormatter.ofPattern("EEE, MMM dd yyyy 'at' hh:mm:ss a", Locale.ENGLISH);
 
     private static final int PAGE_SIZE = 10;
 
@@ -92,6 +92,8 @@ public final class SparklingHistory {
         public String player;
         public String critter;
         public boolean unique;
+        /** Your own catches only: tickets used since your previous sparkling. Null otherwise. */
+        public Integer tickets;
     }
 
     /** The whole file. */
@@ -178,6 +180,10 @@ public final class SparklingHistory {
         entry.at = System.currentTimeMillis();
         entry.player = player;
         entry.critter = critter;
+        Minecraft self = Minecraft.getInstance();
+        if (self.player != null && player.equalsIgnoreCase(self.player.getName().getString())) {
+            entry.tickets = TicketCounter.takeForCatch();
+        }
         data.entries.add(0, entry);
         save();
         ShinyHunterClient.LOGGER.info("History: {} caught a SPARKLING {}", player, critter);
@@ -293,7 +299,9 @@ public final class SparklingHistory {
         String critterColour = data.colours.getOrDefault(entry.critter, "§f");
 
         MutableComponent date = Component.literal("§7" + DATE.format(when));
-        Component hover = Component.literal("§f" + TIMESTAMP.format(when));
+        Component hover = Component.literal("§f" + TIMESTAMP.format(when) + (entry.tickets == null ? ""
+                : " §7(Took §e" + entry.tickets + (entry.tickets == 1 ? " §7ticket" : " §7tickets")
+                        + " since last §6§lSPARKLING§7)"));
         date.withStyle(style -> style.withHoverEvent(new HoverEvent.ShowText(hover)));
 
         MutableComponent line = date.append(Component.literal(" " + nameColour + entry.player

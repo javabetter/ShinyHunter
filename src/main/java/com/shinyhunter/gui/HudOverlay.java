@@ -54,6 +54,8 @@ public final class HudOverlay {
         PANELS.add(new HudPanel("timer", "Run timer", HudOverlay::timerLines));
         PANELS.add(new HudPanel("splits", "Biome splits", HudOverlay::splitLines));
         PANELS.add(new HudPanel("contest", "Miria's Contest", HudOverlay::contestLines));
+        PANELS.add(new HudPanel("contest_claims", "Unclaimed contests", HudOverlay::claimLines));
+        PANELS.add(new HudPanel("tickets", "Tickets since sparkling", HudOverlay::ticketLines));
         PANELS.add(new HudPanel("rockmites", "Rockmites", HudOverlay::rockmiteLines));
         PANELS.add(new HudPanel("trades", "Shard trades", HudOverlay::tradeLines));
         for (String biome : CritterDex.biomes()) {
@@ -201,6 +203,35 @@ public final class HudOverlay {
                     && client.getCurrentServer().ip.toLowerCase().contains("hypixel");
             default -> SkyblockSidebar.inSkyblock(client);
         };
+    }
+
+    /** Unclaimed Miria's Contest rewards, red at or past the warning level. */
+    private static List<String> claimLines() {
+        List<String> lines = new ArrayList<>();
+        ShinyConfig config = ShinyConfig.get();
+        Minecraft client = Minecraft.getInstance();
+        if (!config.trackUnclaimedContests || !SkyblockSidebar.inSkyblock(client)) {
+            return lines;
+        }
+        int count = config.unclaimedContests;
+        if (count < 0) {
+            lines.add("§b§lUnclaimed contests: §7open the contest menu");
+        } else {
+            lines.add("§b§lUnclaimed contests: " + (count >= config.unclaimedContestWarnAt ? "§c" : "§f") + count);
+        }
+        return lines;
+    }
+
+    /** Tickets used since your last sparkling. */
+    private static List<String> ticketLines() {
+        List<String> lines = new ArrayList<>();
+        ShinyConfig config = ShinyConfig.get();
+        Minecraft client = Minecraft.getInstance();
+        if (!config.trackTicketsSinceSparkling || !SkyblockSidebar.inSkyblock(client)) {
+            return lines;
+        }
+        lines.add("§b§lTickets since sparkling: §f" + config.ticketsSinceSparkling);
+        return lines;
     }
 
     private static List<String> contestLines() {

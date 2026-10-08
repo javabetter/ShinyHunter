@@ -125,6 +125,8 @@ public class ShinyHunterClient implements ClientModInitializer {
         Welcome.register();
         UpdateChecker.register();
         SafariJoinAssist.register();
+        TicketCounter.register();
+        ContestClaims.register();
         Shaders.registerWithIris();
         var all = ShinyScanner.allKeywords(config);
         var everywhere = ShinyScanner.activeKeywords(config, false);
