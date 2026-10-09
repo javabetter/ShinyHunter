@@ -18,14 +18,10 @@ import java.util.regex.Pattern;
 /**
  * Keeps count of Miria's Contest rewards waiting to be claimed.
  *
- * <p>The count is read once from the game's contest menu — any open container whose items mention
- * "Miria's Contest" — and from then on goes up by one every time {@link ContestTracker} sees a
- * contest completed. Opening the menu again re-reads it, which also picks up claims. Until it has
- * been read once the counter is unknown, and the player is told (once per session) to open the menu.
- *
- * <p>Two menu layouts are handled, since either is plausible: one item per unclaimed contest
- * (each saying "click to claim"), or one item whose lore states the count ("12 unclaimed ...").
- * The lore of what matched is logged, so the reading can be checked against the real menu.
+ * <p>The count is read from Miria's menu ("You have N unclaimed award!") or her contest list, goes
+ * up by one every time {@link ContestTracker} sees a contest completed, and drops back when Hypixel
+ * says rewards were claimed. Until it has been read once the counter is unknown, and the player is
+ * told (once per session) to open Miria's menu.
  *
  * <p>At or above the warning level it says so in chat and with a "Claim contests!" title: when a
  * contest completion pushes it there, and once per session on joining.
@@ -35,8 +31,12 @@ public final class ContestClaims {
     private static final int SCAN_INTERVAL_TICKS = 10;
     private static final int JOIN_DELAY_TICKS = 120;
 
-    /** A count in a lore line: "You have 12 unclaimed", "Unclaimed: 12", "12 contests". */
-    private static final Pattern COUNT = Pattern.compile("(\\d[\\d,]*)");
+    /** Miria's chest: "You have 1 unclaimed award!" (or "no unclaimed awards"). */
+    private static final Pattern AWARDS = Pattern.compile(
+            "You have (\\d+|no) unclaimed awards?", Pattern.CASE_INSENSITIVE);
+
+    /** Hypixel's claim line, e.g. "STARLYN CONTEST REWARDS CLAIMED" (server message only). */
+    private static final Pattern CLAIMED = Pattern.compile("^[A-Z' ]*CONTEST REWARDS CLAIMED$");
 
     private static int tickCounter;
     private static int joinCountdown = -1;
@@ -48,6 +48,11 @@ public final class ContestClaims {
 
     public static void register() {
         ClientTickEvents.END_CLIENT_TICK.register(ContestClaims::onClientTick);
+        net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
+            if (!overlay) {
+                onChat(message);
+            }
+        });
     }
 
     private static void onClientTick(Minecraft client) {
@@ -65,56 +70,95 @@ public final class ContestClaims {
 
     // ------------------------------------------------------------------ reading the menu
 
+    /**
+     * Reads the count from whichever Miria menu is open.
+     * <ul>
+     *   <li><b>Miria's main menu</b>: the "Claim your rewards!" chest says
+     *       "You have N unclaimed award!" — the exact number, so it wins.</li>
+     *   <li><b>The contest list</b> ("Click to view contests"): one item per contest, the
+     *       unclaimed ones saying "click to claim". Counted directly; if the list has a next page,
+     *       the count can only go up from it, since the other pages aren't visible.</li>
+     * </ul>
+     */
     private static void readMenu(AbstractContainerScreen<?> screen, ShinyConfig config) {
-        boolean contestMenu = false;
-        int claimable = 0;
         int stated = -1;
+        boolean listMenu = false;
+        boolean morePages = false;
+        int claimable = 0;
         List<String> sampleLore = null;
         for (Slot slot : screen.getMenu().slots) {
             if (slot.container instanceof Inventory) {
                 continue; // the player's own inventory, shown under every chest menu
             }
             List<String> lore = loreOf(slot.getItem());
-            String joined = String.join("\n", lore).toLowerCase();
-            if (!joined.contains("miria's contest") && !joined.contains("miria’s contest")) {
+            if (lore.isEmpty()) {
                 continue;
             }
-            contestMenu = true;
-            if (!joined.contains("click to claim")) {
-                continue;
-            }
-            claimable++;
-            if (sampleLore == null) {
-                sampleLore = lore;
+            if (lore.get(0).trim().equalsIgnoreCase("Next Page")) {
+                morePages = true;
             }
             for (String line : lore) {
-                String lower = line.toLowerCase();
-                if (lower.contains("unclaimed")) {
-                    Matcher m = COUNT.matcher(line);
-                    if (m.find()) {
-                        stated = Math.max(stated, Integer.parseInt(m.group(1).replace(",", "")));
+                Matcher award = AWARDS.matcher(line);
+                if (award.find()) {
+                    stated = award.group(1).equalsIgnoreCase("no") ? 0 : Integer.parseInt(award.group(1));
+                }
+            }
+            String joined = String.join("\n", lore).toLowerCase();
+            if (joined.contains("miria's contest") || joined.contains("miria\u2019s contest")) {
+                listMenu = true;
+                if (joined.contains("click to claim")) {
+                    claimable++;
+                    if (sampleLore == null) {
+                        sampleLore = lore;
                     }
                 }
             }
         }
-        if (!contestMenu) {
+
+        int count;
+        if (stated >= 0) {
+            count = stated;
+        } else if (listMenu) {
+            count = morePages ? Math.max(claimable, config.unclaimedContests) : claimable;
+            if (!loggedLore && sampleLore != null) {
+                loggedLore = true;
+                ShinyHunterClient.LOGGER.info("Contest list: {} claimable item(s); first one's lore: {}",
+                        claimable, sampleLore);
+            }
+        } else {
             return;
         }
-        if (!loggedLore && sampleLore != null) {
-            loggedLore = true;
-            ShinyHunterClient.LOGGER.info("Contest menu: {} claimable item(s); first one's lore: {}",
-                    claimable, sampleLore);
+        set(config, count, stated >= 0 ? "Miria's menu" : "the contest list");
+    }
+
+    private static void set(ShinyConfig config, int count, String source) {
+        if (count == config.unclaimedContests) {
+            return;
         }
-        int count = stated >= 0 ? stated : claimable;
-        if (count != config.unclaimedContests) {
-            boolean first = config.unclaimedContests < 0;
-            config.unclaimedContests = count;
+        boolean first = config.unclaimedContests < 0;
+        config.unclaimedContests = count;
+        config.save();
+        ShinyHunterClient.LOGGER.info("Unclaimed contests read from {}: {}", source, count);
+        if (first) {
+            tell("§fFound §e" + count + " §funclaimed contest" + (count == 1 ? "" : "s")
+                    + ". §7The counter keeps itself up to date from now on.");
+        }
+    }
+
+    /**
+     * "STARLYN CONTEST REWARDS CLAIMED" — Hypixel's line when rewards are claimed. Counts drop to
+     * zero; if the contest list is still open with some left, the next read puts the rest back.
+     */
+    private static void onChat(Component message) {
+        ShinyConfig config = ShinyConfig.get();
+        if (!config.trackUnclaimedContests) {
+            return;
+        }
+        String text = EntityDataProbe.stripFormatting(message.getString()).trim();
+        if (CLAIMED.matcher(text).matches() && config.unclaimedContests != 0) {
+            config.unclaimedContests = 0;
             config.save();
-            ShinyHunterClient.LOGGER.info("Unclaimed contests read from the menu: {}", count);
-            if (first) {
-                tell("§fFound §e" + count + " §funclaimed contest" + (count == 1 ? "" : "s")
-                        + ". §7The counter keeps itself up to date from now on.");
-            }
+            ShinyHunterClient.LOGGER.info("Contest rewards claimed — unclaimed count reset");
         }
     }
 
@@ -162,7 +206,7 @@ public final class ContestClaims {
         }
         toldThisSession = true;
         if (config.unclaimedContests < 0) {
-            tell("§fTo count your unclaimed Miria's Contests, open the §eMiria's Contest rewards menu§f once. "
+            tell("§fTo count your unclaimed Miria's Contests, open §eMiria's menu§f once. "
                     + "§7After that the count keeps itself up to date.");
         } else if (config.unclaimedContests >= config.unclaimedContestWarnAt) {
             warn(config);
