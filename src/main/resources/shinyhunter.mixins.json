@@ -9,7 +9,8 @@
     "EntityRenderDispatcherMixin",
     "EntityRenderStateMixin",
     "EntityRendererMixin",
-    "LivingEntityRendererMixin"
+    "LivingEntityRendererMixin",
+    "HoverWidthMixin"
   ],
   "injectors": {
     "defaultRequire": 1

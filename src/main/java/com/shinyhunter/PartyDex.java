@@ -326,18 +326,7 @@ public final class PartyDex {
         if (client.player == null) {
             return;
         }
-        MutableComponent hover = Component.literal("");
-        hover.append(Component.literal("Sparklings caught (" + dex.caught().size() + ")\n")
-                .withStyle(ChatFormatting.GREEN, ChatFormatting.BOLD));
-        hover.append(dex.caught().isEmpty()
-                ? Component.literal("none\n").withStyle(ChatFormatting.GRAY)
-                : biomeColumns(dex.caught()));
-        List<String> missing = dex.missing();
-        hover.append(Component.literal("\nStill needed (" + missing.size() + ")\n")
-                .withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
-        hover.append(missing.isEmpty()
-                ? Component.literal("none").withStyle(ChatFormatting.GRAY)
-                : biomeColumns(missing));
+        MutableComponent hover = sparklingHover(dex.caught(), dex.missing());
         if (dex.dexPath().isEmpty()) {
             hover.append(Component.literal("\n\nNo Sparkling Critterdex found in this profile — run /shiny dex "
                     + dex.name()).withStyle(ChatFormatting.DARK_GRAY));
@@ -363,28 +352,96 @@ public final class PartyDex {
             // The hover rides on every line, so the full caught/missing lists are one hover away
             // wherever the cursor happens to be.
             client.player.sendSystemMessage(((MutableComponent) line)
-                    .withStyle(style -> style.withHoverEvent(new HoverEvent.ShowText(hover))));
+                    .withStyle(style -> style.withHoverEvent(new HoverEvent.ShowText(WideHovers.mark(hover)))));
         }
         client.player.sendSystemMessage(Component.literal("§b§m                    "));
+    }
+
+    /**
+     * The {@code /sparkling} hover: caught and missing sparklings, each as a biome table. Both
+     * tables share one width, so the rule lines between and under them line up.
+     */
+    static MutableComponent sparklingHover(java.util.Collection<String> caughtCritters, List<String> missing) {
+        Table caught = biomeTable(caughtCritters);
+        Table needed = biomeTable(missing);
+        int width = Math.max(caught.width(), needed.width());
+
+        MutableComponent hover = Component.literal("");
+        hover.append(Component.literal("Sparklings caught\n\n").withStyle(ChatFormatting.GREEN, ChatFormatting.BOLD));
+        hover.append(caught.render(width));
+        hover.append(rule('-', width, ChatFormatting.DARK_GRAY));
+        hover.append(Component.literal("Sparklings missing\n\n").withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
+        hover.append(needed.render(width));
+        return hover;
     }
 
     /** Biome header colours, matching Hypixel's own milestone messages. */
     private static final Map<String, String> BIOME_COLOURS = Map.of(
             "Forest", "§2", "Cavern", "§6", "Icy", "§9", "Haunted", "§5");
 
-    /** Gap between columns, in pixels. */
-    private static final int COLUMN_GAP = 10;
+    /** What separates the biome headers. */
+    private static final String HEADER_SEPARATOR = " §8| ";
 
     /**
-     * The critters as a table: one labelled column per biome, each listed rarest first and
-     * coloured by rarity. Chat text isn't monospaced, so columns are lined up by measuring each
-     * cell's real width in the game's font and padding with spaces.
+     * Critters laid out as one labelled column per biome — header "Cavern (3) | Forest (5) | ...",
+     * underlined, then each column listed from most common to rarest and coloured by rarity.
+     * Chat text isn't monospaced, so each column starts where its header does: cells are padded
+     * with spaces measured in the game's own font.
      */
-    private static Component biomeColumns(java.util.Collection<String> critters) {
-        net.minecraft.client.gui.Font font = Minecraft.getInstance().font;
-        int space = Math.max(1, font.width(" "));
-        List<String> biomes = CritterDex.biomes();
+    private record Table(List<Component> headers, List<List<String>> columns, int[] starts, int width) {
 
+        /** The table, with a "====" rule under the header row, everything newline-terminated. */
+        Component render(int ruleWidth) {
+            net.minecraft.client.gui.Font font = Minecraft.getInstance().font;
+            MutableComponent out = Component.literal("");
+            MutableComponent header = Component.literal("");
+            for (int i = 0; i < headers.size(); i++) {
+                if (i > 0) {
+                    header.append(Component.literal(HEADER_SEPARATOR));
+                }
+                header.append(headers.get(i));
+            }
+            out.append(header).append(Component.literal("\n"));
+            out.append(rule('=', ruleWidth, ChatFormatting.DARK_GRAY));
+
+            int rows = 0;
+            for (List<String> column : columns) {
+                rows = Math.max(rows, column.size());
+            }
+            if (rows == 0) {
+                out.append(Component.literal("none\n").withStyle(ChatFormatting.GRAY));
+                return out;
+            }
+            int space = Math.max(1, font.width(" "));
+            for (int row = 0; row < rows; row++) {
+                MutableComponent line = Component.literal("");
+                int x = 0;
+                for (int i = 0; i < columns.size(); i++) {
+                    List<String> column = columns.get(i);
+                    if (row >= column.size()) {
+                        continue;
+                    }
+                    int pad = starts[i] - x;
+                    if (pad > 0) {
+                        int spaces = Math.round((float) pad / space);
+                        line.append(Component.literal(" ".repeat(spaces)));
+                        x += spaces * space;
+                    }
+                    String critter = column.get(row);
+                    Component cell = Component.literal(CritterDex.rarityOf(critter).colour + critter);
+                    line.append(cell);
+                    x += font.width(cell);
+                }
+                out.append(line).append(Component.literal("\n"));
+            }
+            return out;
+        }
+    }
+
+    private static Table biomeTable(java.util.Collection<String> critters) {
+        net.minecraft.client.gui.Font font = Minecraft.getInstance().font;
+        List<String> biomes = CritterDex.biomes();
+        List<Component> headers = new ArrayList<>();
         List<List<String>> columns = new ArrayList<>();
         for (String biome : biomes) {
             List<String> column = new ArrayList<>();
@@ -393,53 +450,46 @@ public final class PartyDex {
                     column.add(critter);
                 }
             }
+            // Most common first, rarest last; alphabetical within a rarity.
             column.sort(java.util.Comparator
-                    .comparing((String c) -> CritterDex.rarityOf(c)).reversed()
+                    .comparing((String c) -> CritterDex.rarityOf(c))
                     .thenComparing(String::compareToIgnoreCase));
             columns.add(column);
+            headers.add(Component.literal(BIOME_COLOURS.getOrDefault(biome, "§f") + "§l§n" + biome
+                    + " (" + column.size() + ")"));
         }
-
-        // Header and cells as components, so widths include bold and colour exactly as drawn.
-        List<Component> headers = new ArrayList<>();
-        int[] widths = new int[biomes.size()];
-        int rows = 0;
+        // Each column starts where its header starts in the "A | B | C" header row. A column's
+        // names can be wider than its header, so the header gets pushed right when they are.
+        int[] starts = new int[biomes.size()];
+        int x = 0;
+        int separator = font.width(Component.literal(HEADER_SEPARATOR));
+        List<Component> padded = new ArrayList<>();
+        int space = Math.max(1, font.width(" "));
         for (int i = 0; i < biomes.size(); i++) {
-            String biome = biomes.get(i);
-            Component header = Component.literal(BIOME_COLOURS.getOrDefault(biome, "§f") + "§l" + biome
-                    + " (" + columns.get(i).size() + ")");
-            headers.add(header);
-            widths[i] = font.width(header);
+            starts[i] = x;
+            int cellWidth = font.width(headers.get(i));
             for (String critter : columns.get(i)) {
-                widths[i] = Math.max(widths[i], font.width(critter));
+                cellWidth = Math.max(cellWidth, font.width(critter));
             }
-            rows = Math.max(rows, columns.get(i).size());
-        }
-
-        MutableComponent table = Component.literal("");
-        appendRow(table, headers, widths, space, font);
-        for (int row = 0; row < rows; row++) {
-            List<Component> cells = new ArrayList<>();
-            for (List<String> column : columns) {
-                cells.add(row < column.size()
-                        ? Component.literal(CritterDex.rarityOf(column.get(row)).colour + column.get(row))
-                        : Component.literal(""));
+            Component header = headers.get(i);
+            int extra = cellWidth - font.width(header);
+            if (extra > 0 && i < biomes.size() - 1) {
+                // Pad after the header (before the separator) so the next column clears the names.
+                int spaces = Math.round((float) extra / space);
+                header = Component.empty().append(header).append(Component.literal(" ".repeat(spaces)));
+                cellWidth = font.width(header);
             }
-            appendRow(table, cells, widths, space, font);
+            padded.add(header);
+            x += cellWidth + (i < biomes.size() - 1 ? separator : 0);
         }
-        return table;
+        return new Table(padded, columns, starts, x);
     }
 
-    private static void appendRow(MutableComponent table, List<Component> cells, int[] widths, int space,
-                                  net.minecraft.client.gui.Font font) {
-        for (int i = 0; i < cells.size(); i++) {
-            Component cell = cells.get(i);
-            table.append(cell);
-            if (i < cells.size() - 1) {
-                int pad = widths[i] + COLUMN_GAP - font.width(cell);
-                table.append(Component.literal(" ".repeat(Math.max(1, Math.round((float) pad / space)))));
-            }
-        }
-        table.append(Component.literal("\n"));
+    /** A full-width rule line of one character ("====" or "----"). */
+    private static Component rule(char c, int width, ChatFormatting colour) {
+        net.minecraft.client.gui.Font font = Minecraft.getInstance().font;
+        int each = Math.max(1, font.width(String.valueOf(c)));
+        return Component.literal(String.valueOf(c).repeat(Math.max(4, width / each)) + "\n").withStyle(colour);
     }
 
     private static void addIfPresent(List<Component> lines, String line) {
