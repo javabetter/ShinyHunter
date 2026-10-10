@@ -50,6 +50,9 @@ public final class ShinyConfig {
     /** Unclaimed contest rewards; -1 until the contest menu has been opened once to read it. */
     public int unclaimedContests = -1;
 
+    /** The last contest window counted toward unclaimed contests, so each is counted once. */
+    public long lastCountedContestWindow = -1;
+
     /** Warn in chat and with a title at this many unclaimed contests. */
     public int unclaimedContestWarnAt = 25;
 

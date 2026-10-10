@@ -92,10 +92,19 @@ public final class ContestTracker {
     private static boolean complete;
 
     /**
-     * Set once this window has been seen below Uncommon. "Ticket earned!" is only announced on a
-     * change seen happen, never for a contest that was already done when you logged in.
+     * Set once this window has been seen not yet done — below Uncommon, or with no tier row at all
+     * (the row only appears once you have points, so a contest can go straight from nothing to
+     * Uncommon). "Ticket earned!" needs this, so it's never announced for a contest that was
+     * already done when you logged in.
      */
     private static boolean seenIncomplete;
+
+    /** The world the player is in, and since when; an empty sidebar right after joining means nothing. */
+    private static Object lastLevel;
+    private static long levelSince;
+
+    /** An empty tier row only counts as "not done yet" this long after joining a world. */
+    private static final long SETTLE_MILLIS = 15_000L;
 
     /** Minute marks already rung this window, so each rings once. */
     private static final Set<Integer> WARNED = new LinkedHashSet<>();
@@ -117,6 +126,10 @@ public final class ContestTracker {
         }
         tickCounter = 0;
 
+        if (client.level != lastLevel) {
+            lastLevel = client.level;
+            levelSince = System.currentTimeMillis();
+        }
         rollWindow();
         readSidebar(client, config);
         maybeWarn(client, config);
@@ -181,24 +194,45 @@ public final class ContestTracker {
 
         // The tier alone decides. Points are parsed only for the log — a row that reads as a tier
         // but whose number is unparseable must still count.
-        if (tier.isEmpty() || complete || secondsIntoWindow < STALE_GUARD_SECONDS) {
+        if (complete || secondsIntoWindow < STALE_GUARD_SECONDS) {
             return;
         }
-        if (COMPLETE_TIERS.contains(tier.toUpperCase())) {
-            complete = true;
-            ShinyHunterClient.LOGGER.info("Contest complete — {} with {}", tier, points);
-            Debug.log("contest complete:", tier, "with", points);
-            // Only a completion seen happen counts: relogging into an already-done contest
-            // mustn't announce or count it again.
-            if (seenIncomplete) {
-                if (config.announceTicketEarned) {
-                    PartyChat.send(config.critterChannel, "Ticket earned!");
-                }
-                ContestClaims.onContestCompleted();
+        if (tier.isEmpty()) {
+            // No tier row: no points yet — but only trusted once the sidebar has settled, since a
+            // freshly joined world shows an empty sidebar for a moment whatever the contest says.
+            if (SkyblockSidebar.inSkyblock(client)
+                    && System.currentTimeMillis() - levelSince >= SETTLE_MILLIS) {
+                seenIncomplete = true;
             }
-        } else {
-            seenIncomplete = true;
+            return;
         }
+        if (!COMPLETE_TIERS.contains(tier.toUpperCase())) {
+            seenIncomplete = true;
+            return;
+        }
+
+        complete = true;
+        ShinyHunterClient.LOGGER.info("Contest complete — {} with {}", tier, points);
+        Debug.log("contest complete:", tier, "with", points);
+
+        // Each contest window is counted once, ever — remembered across relogs and restarts — so
+        // rejoining an already-done contest can't count or announce it a second time.
+        long window = globalWindow();
+        if (config.lastCountedContestWindow == window) {
+            return;
+        }
+        config.lastCountedContestWindow = window;
+        config.save();
+        ContestClaims.onContestCompleted();
+        if (seenIncomplete && config.announceTicketEarned) {
+            PartyChat.send(config.critterChannel, "Ticket earned!");
+        }
+    }
+
+    /** Which contest window this is, counted from the epoch in local time (one every 20 minutes). */
+    private static long globalWindow() {
+        long local = java.time.LocalDateTime.now().toEpochSecond(java.time.ZoneOffset.UTC);
+        return Math.floorDiv(local - FIRST_START_MINUTE * 60L, WINDOW_SECONDS);
     }
 
     // ------------------------------------------------------------------ warnings
