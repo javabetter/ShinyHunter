@@ -38,6 +38,21 @@ public final class ShinyConfig {
     /** On joining Hypixel, say so in chat if a newer Shiny Hunter release is out on GitHub. */
     public boolean checkForUpdates = true;
 
+    /** Save every Safari run (length, catches, shards, sparklings) for /shiny history. */
+    public boolean runHistoryEnabled = true;
+
+    /** Value run shards at the bazaar's instant-sell price rather than the sell-offer price. */
+    public boolean runCoinsInstaSell = false;
+
+    /** Unlock achievements (/shiny achievements). */
+    public boolean achievementsEnabled = true;
+
+    /** Play the challenge-complete sound when an achievement unlocks. */
+    public boolean achievementSound = true;
+
+    /** Also say "Achievement unlocked: X!" in party chat. */
+    public boolean achievementsToParty = false;
+
     /** Count Safari tickets used since your last sparkling, for the HUD and history. */
     public boolean trackTicketsSinceSparkling = true;
 
@@ -762,6 +777,9 @@ public final class ShinyConfig {
 
     /** Also beacon hives whose state isn't known yet, in a dimmer colour. */
     public boolean honeyHiveShowUnknown = true;
+
+    /** Over a hive you looted, count down to its refill ("Refills in 42m"). */
+    public boolean honeyHiveShowRefill = true;
 
     /**
      * Draw the box on the hive block through terrain.

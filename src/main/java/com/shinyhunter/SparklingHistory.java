@@ -92,7 +92,7 @@ public final class SparklingHistory {
         public String player;
         public String critter;
         public boolean unique;
-        /** Your own catches only: tickets used since your previous sparkling. Null otherwise. */
+        /** Tickets the party used since the previous sparkling (yours or a party member's). */
         public Integer tickets;
     }
 
@@ -180,12 +180,14 @@ public final class SparklingHistory {
         entry.at = System.currentTimeMillis();
         entry.player = player;
         entry.critter = critter;
+        // Every catch announced here is yours or a party member's, and the count is the party's luck.
+        entry.tickets = TicketCounter.takeForCatch(player);
         Minecraft self = Minecraft.getInstance();
-        if (self.player != null && player.equalsIgnoreCase(self.player.getName().getString())) {
-            entry.tickets = TicketCounter.takeForCatch();
-        }
+        boolean own = self.player != null && player.equalsIgnoreCase(self.player.getName().getString());
         data.entries.add(0, entry);
         save();
+        RunHistory.onSparkling(player, critter, own);
+        Achievements.onSparkling(entry, own);
         ShinyHunterClient.LOGGER.info("History: {} caught a SPARKLING {}", player, critter);
 
         // "Unique" is judged against the player's Sparkling Critterdex from the API, which is the
@@ -228,6 +230,7 @@ public final class SparklingHistory {
         if (!hadBefore) {
             entry.unique = true;
             save();
+            Achievements.onUnique(entry);
         }
     }
 
@@ -327,6 +330,94 @@ public final class SparklingHistory {
             }
         }
         return number;
+    }
+
+    /** Every entry, newest first. Read-only. */
+    public static List<Entry> entries() {
+        return java.util.Collections.unmodifiableList(data.entries);
+    }
+
+    /** The critter's rarity colour code as learned from chat, else white. */
+    public static String colourOf(String critter) {
+        return data.colours.getOrDefault(critter, "§f");
+    }
+
+    /** The player's name colour from their rank, as learned from chat. */
+    public static String nameColour(String player) {
+        String rank = data.ranks.get(player);
+        return rank == null ? DEFAULT_NAME_COLOUR : RANK_COLOURS.getOrDefault(rank, DEFAULT_NAME_COLOUR);
+    }
+
+    /** Which catch of this critter an entry was, counting everyone's; see {@link #catchNumber}. */
+    public static int numberOf(Entry entry) {
+        return catchNumber(entry);
+    }
+
+    /** Where the shinylogs.vercel.app backfiller's download lands by default. */
+    public static Path defaultImportFile() {
+        return Path.of(System.getProperty("user.home"), "Downloads", "sparkling-entries.json");
+    }
+
+    /**
+     * Merges an {@code entries.json} from the Sparkling Log Backfiller
+     * (shinylogs.vercel.app) into the history. A catch already here — same player and critter
+     * within five minutes — is skipped, so importing the same file twice changes nothing.
+     *
+     * @return how many catches were added, or -1 if the file couldn't be read
+     */
+    public static int importFrom(Path file) {
+        com.google.gson.JsonObject root;
+        try {
+            root = GSON.fromJson(Files.readString(file, StandardCharsets.UTF_8), com.google.gson.JsonObject.class);
+        } catch (IOException | RuntimeException e) {
+            ShinyHunterClient.LOGGER.warn("Couldn't read sparkling import {}", file, e);
+            return -1;
+        }
+        if (root == null || !root.has("entries") || !root.get("entries").isJsonArray()) {
+            return -1;
+        }
+        int added = 0;
+        for (com.google.gson.JsonElement element : root.getAsJsonArray("entries")) {
+            if (!element.isJsonObject()) {
+                continue;
+            }
+            com.google.gson.JsonObject o = element.getAsJsonObject();
+            if (!o.has("at") || !o.has("player") || !o.has("critter")) {
+                continue;
+            }
+            Entry entry = new Entry();
+            entry.at = o.get("at").getAsLong();
+            entry.player = o.get("player").getAsString();
+            String critter = o.get("critter").getAsString().trim();
+            String canonical = CritterDex.canonical(critter);
+            entry.critter = canonical != null ? canonical : critter;
+            entry.unique = o.has("unique") && o.get("unique").getAsBoolean();
+            if (o.has("ticketsSinceLast") && o.get("ticketsSinceLast").isJsonPrimitive()) {
+                entry.tickets = o.get("ticketsSinceLast").getAsInt();
+            }
+            if (alreadyHave(entry)) {
+                continue;
+            }
+            data.entries.add(entry);
+            added++;
+        }
+        if (added > 0) {
+            data.entries.sort((a, b) -> Long.compare(b.at, a.at));
+            save();
+        }
+        ShinyHunterClient.LOGGER.info("Imported {} sparkling(s) from {}", added, file);
+        return added;
+    }
+
+    private static boolean alreadyHave(Entry candidate) {
+        for (Entry entry : data.entries) {
+            if (entry.player.equalsIgnoreCase(candidate.player)
+                    && entry.critter.equalsIgnoreCase(candidate.critter)
+                    && Math.abs(entry.at - candidate.at) <= 5 * 60 * 1000L) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public static int count() {

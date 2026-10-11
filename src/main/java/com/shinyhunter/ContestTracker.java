@@ -224,6 +224,7 @@ public final class ContestTracker {
         config.lastCountedContestWindow = window;
         config.save();
         ContestClaims.onContestCompleted();
+        Achievements.onContestCompleted();
         if (seenIncomplete && config.announceTicketEarned) {
             PartyChat.send(config.critterChannel, "Ticket earned!");
         }

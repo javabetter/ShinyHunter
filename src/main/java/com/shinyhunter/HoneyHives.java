@@ -82,7 +82,10 @@ public final class HoneyHives {
     /** hive id -> when it refills, from the API. */
     private static final Map<String, Long> REFILLS = new HashMap<>();
 
-    /** Nest key -> when this client saw it looted, so it's empty without asking anyone. */
+    /**
+     * Nest key -> when this client saw it looted, so it's empty without asking anyone. Saved to
+     * disk, so a hive looted before a restart or a server hop stays empty for its full hour.
+     */
     private static final Map<String, Long> LOOTED_HERE = new HashMap<>();
 
     /** Loots seen but not yet matched to a hive id: nest key -> loot time. */
@@ -90,6 +93,11 @@ public final class HoneyHives {
 
     /** What to draw: nest key -> colour, worked out on the slow cycle and drawn every tick. */
     private static final Map<String, Integer> VISIBLE = new LinkedHashMap<>();
+
+    /** Hives you looted that are in range: nest key -> when they refill, for the countdown label. */
+    private static final Map<String, Long> EMPTY_LABELS = new LinkedHashMap<>();
+
+    private static final com.google.gson.Gson GSON = new com.google.gson.Gson();
 
     private static int stateCounter = STATE_INTERVAL_TICKS;
     private static int refreshCounter = REFRESH_INTERVAL_TICKS;
@@ -99,6 +107,7 @@ public final class HoneyHives {
     }
 
     public static void register() {
+        loadLoots();
         ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
             if (!overlay) {
                 handle(message);
@@ -126,6 +135,7 @@ public final class HoneyHives {
             if (key != null) {
                 LOOTED_HERE.remove(key);
                 PENDING.remove(key);
+                saveLoots();
                 ShinyHunterClient.LOGGER.info("Queen bee refilled the hive at {}", key);
             }
             return;
@@ -143,6 +153,7 @@ public final class HoneyHives {
         }
         LOOTED_HERE.put(key, now);
         PENDING.put(key, now);
+        saveLoots();
         // The binding needs the API to have caught up, so this is a nudge rather than a demand.
         refreshCounter = REFRESH_INTERVAL_TICKS;
         ShinyHunterClient.LOGGER.info("Honeyhive looted at {} — full again at {}", key,
@@ -218,7 +229,17 @@ public final class HoneyHives {
     }
 
     private static State stateOf(Minecraft client, String key, NestSurvey.Nest nest, long now) {
-        // 1. The block, when it's loaded. Nothing beats looking at it.
+        // 1. This client's own memory of looting it. Checked before the block: hives are looted
+        //    per player, so the block can go on looking full to you after you've emptied it.
+        Long looted = LOOTED_HERE.get(key);
+        if (looted != null) {
+            if (now < looted + REFILL_MILLIS) {
+                return State.EMPTY;
+            }
+            LOOTED_HERE.remove(key);
+            saveLoots();
+        }
+        // 2. The block, when it's loaded.
         BlockPos pos = new BlockPos(nest.x, nest.y, nest.z);
         if (client.level.hasChunkAt(pos)) {
             BlockState state = client.level.getBlockState(pos);
@@ -226,14 +247,6 @@ public final class HoneyHives {
                 return state.getValue(BeehiveBlock.HONEY_LEVEL) >= BeehiveBlock.MAX_HONEY_LEVELS
                         ? State.FULL : State.EMPTY;
             }
-        }
-        // 2. This client's own memory of looting it.
-        Long looted = LOOTED_HERE.get(key);
-        if (looted != null) {
-            if (now < looted + REFILL_MILLIS) {
-                return State.EMPTY;
-            }
-            LOOTED_HERE.remove(key);
         }
         // 3. The API, for hives whose id has been matched to this position.
         if (nest.hive != null) {
@@ -251,6 +264,7 @@ public final class HoneyHives {
     /** Decides which hives get a beacon, and in what colour. Runs on the slow cycle. */
     private static void recompute(Minecraft client, ShinyConfig config) {
         VISIBLE.clear();
+        EMPTY_LABELS.clear();
         long now = System.currentTimeMillis();
         int full = BeeNestHighlighter.parseColor(config.honeyHiveColor, 0xFF55FF55);
         int unknown = (full & 0x00FFFFFF) | 0x66000000;
@@ -263,6 +277,10 @@ public final class HoneyHives {
                 continue;
             }
             State state = stateOf(client, entry.getKey(), nest, now);
+            Long looted = LOOTED_HERE.get(entry.getKey());
+            if (state == State.EMPTY && looted != null && config.honeyHiveShowRefill) {
+                EMPTY_LABELS.put(entry.getKey(), looted + REFILL_MILLIS);
+            }
             if (state == State.EMPTY || (state == State.UNKNOWN && !config.honeyHiveShowUnknown)) {
                 continue;
             }
@@ -275,6 +293,7 @@ public final class HoneyHives {
         // The beams themselves are drawn by the game's beacon renderer, from inside the level
         // render; this hands it the current set. The box around the hive is still a gizmo.
         Map<Vec3, Integer> beams = new LinkedHashMap<>();
+        drawRefillLabels(config);
         if (VISIBLE.isEmpty()) {
             HiveBeacons.clear();
             return;
@@ -299,6 +318,27 @@ public final class HoneyHives {
             ShinyHunterClient.LOGGER.debug("Can't draw honeyhive outlines", e);
         }
         HiveBeacons.set(beams);
+    }
+
+    /** "Refills in 42m" over each hive you looted, so an emptied hive isn't walked back to. */
+    private static void drawRefillLabels(ShinyConfig config) {
+        long now = System.currentTimeMillis();
+        try {
+            for (Map.Entry<String, Long> entry : EMPTY_LABELS.entrySet()) {
+                NestSurvey.Nest nest = NestSurvey.nests().get(entry.getKey());
+                long left = (entry.getValue() - now) / 1000;
+                if (nest == null || left <= 0) {
+                    continue;
+                }
+                String text = "Refills in " + (left >= 60 ? (left / 60) + "m" : left + "s");
+                var label = Gizmos.billboardTextOverBlock(text, new BlockPos(nest.x, nest.y, nest.z),
+                                0, 0xFFFF6E6E, 0.6f)
+                        .persistForMillis(GIZMO_LIFETIME_MILLIS);
+                Shaders.place(label, config.honeyHiveThroughWalls);
+            }
+        } catch (IllegalStateException e) {
+            ShinyHunterClient.LOGGER.debug("Can't draw honeyhive refill labels", e);
+        }
     }
 
     /** The stand-in beam, drawn only if the real beacon beam couldn't be submitted. */
@@ -420,6 +460,45 @@ public final class HoneyHives {
         return node;
     }
 
+    // ------------------------------------------------------------------ storage
+
+    private static java.nio.file.Path lootsPath() {
+        return net.fabricmc.loader.api.FabricLoader.getInstance().getConfigDir()
+                .resolve("shinyhunter-hive-loots.json");
+    }
+
+    /** Reads the saved loots, dropping any whose hour is already up. */
+    private static void loadLoots() {
+        java.nio.file.Path file = lootsPath();
+        if (!java.nio.file.Files.exists(file)) {
+            return;
+        }
+        try {
+            JsonObject saved = GSON.fromJson(java.nio.file.Files.readString(file), JsonObject.class);
+            long now = System.currentTimeMillis();
+            for (Map.Entry<String, JsonElement> entry : saved.entrySet()) {
+                long at = entry.getValue().getAsLong();
+                if (now < at + REFILL_MILLIS) {
+                    LOOTED_HERE.put(entry.getKey(), at);
+                }
+            }
+            ShinyHunterClient.LOGGER.info("Honeyhives: {} looted hive(s) still refilling", LOOTED_HERE.size());
+        } catch (Exception e) {
+            ShinyHunterClient.LOGGER.warn("Couldn't read saved honeyhive loots", e);
+        }
+    }
+
+    private static void saveLoots() {
+        try {
+            JsonObject out = new JsonObject();
+            LOOTED_HERE.forEach(out::addProperty);
+            java.nio.file.Files.createDirectories(lootsPath().getParent());
+            java.nio.file.Files.writeString(lootsPath(), GSON.toJson(out));
+        } catch (Exception e) {
+            ShinyHunterClient.LOGGER.warn("Couldn't save honeyhive loots", e);
+        }
+    }
+
     // ------------------------------------------------------------------ command
 
     /** {@code /shiny hives}: what's known about each hive right now. */
@@ -458,6 +537,7 @@ public final class HoneyHives {
         REFILLS.clear();
         PENDING.clear();
         VISIBLE.clear();
+        EMPTY_LABELS.clear();
         refreshCounter = REFRESH_INTERVAL_TICKS;
         stateCounter = STATE_INTERVAL_TICKS;
     }

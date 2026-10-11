@@ -218,6 +218,14 @@ public final class ShinyScanner {
         boolean sparkling = reason == Reason.PARTICLES
                 || EntityDataProbe.nameOf(entity).toUpperCase().contains("SPARKLING");
         if (sparkling) {
+            // A trail match is on the mob itself, whose name is the vanilla one ("Silverfish");
+            // the Skyblock name is on the nametag stand above it.
+            String critter = critterNear(client, entity);
+            if (critter != null) {
+                name = "SPARKLING " + critter;
+            } else if (CritterDex.findIn(name) == null) {
+                name = "Sparkling critter §7(" + name + ")";
+            }
             announceSparkling(client, config, name, reason);
         } else {
             client.player.sendSystemMessage(Component.literal(
@@ -231,6 +239,30 @@ public final class ShinyScanner {
         }
 
         ShinyHunterClient.LOGGER.info("Match: {} — detected by {}", name, reason.label);
+    }
+
+    /**
+     * The Skyblock critter this entity is, read from its own name or the nametag stand stacked over
+     * it — whichever names a critter, nearest first. Null when nothing nearby names one.
+     */
+    static String critterNear(Minecraft client, Entity entity) {
+        String own = CritterDex.findIn(EntityDataProbe.nameOf(entity));
+        if (own != null || client.level == null) {
+            return own;
+        }
+        net.minecraft.world.phys.AABB column = entity.getBoundingBox()
+                .inflate(1.5, 1.0, 1.5).expandTowards(0, 4.5, 0);
+        String best = null;
+        double bestDistance = Double.MAX_VALUE;
+        for (Entity near : client.level.getEntities(entity, column)) {
+            String critter = CritterDex.findIn(EntityDataProbe.nameOf(near));
+            double distance = near.distanceToSqr(entity);
+            if (critter != null && distance < bestDistance) {
+                best = critter;
+                bestDistance = distance;
+            }
+        }
+        return best;
     }
 
     private static void announceSparkling(Minecraft client, ShinyConfig config, String name, Reason reason) {

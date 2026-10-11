@@ -76,6 +76,10 @@ public class ShinyMoulConfig extends Config {
     public CrittersCategory critters = new CrittersCategory();
 
     @Expose
+    @Category(name = "History & achievements", desc = "History & achievements")
+    public HistoryAchievementsCategory historyAchievements = new HistoryAchievementsCategory();
+
+    @Expose
     @Category(name = "Sparkling luck", desc = "Sparkling luck")
     public SparklingLuckCategory sparklingLuck = new SparklingLuckCategory();
 
@@ -329,6 +333,11 @@ public class ShinyMoulConfig extends Config {
         public boolean honeyHiveShowUnknown;
 
         @Expose
+        @ConfigOption(name = "Refill countdown", desc = "Over a hive you looted, show how long until it refills. Remembered across restarts.")
+        @ConfigEditorBoolean
+        public boolean honeyHiveShowRefill;
+
+        @Expose
         @ConfigOption(name = "Nest survey", desc = "Record fence+trapdoor bee nests to config/shinyhunter-nests.json.")
         @ConfigEditorBoolean
         public boolean surveyNests;
@@ -466,15 +475,44 @@ public class ShinyMoulConfig extends Config {
 
     }
 
+    public static class HistoryAchievementsCategory {
+
+        @Expose
+        @ConfigOption(name = "Save runs", desc = "Record every Safari run for /shiny history: length, catches, shards, sparklings, splits.")
+        @ConfigEditorBoolean
+        public boolean runHistoryEnabled;
+
+        @Expose
+        @ConfigOption(name = "Coins at insta-sell", desc = "Value shards at the bazaar's instant-sell price instead of the sell-offer price.")
+        @ConfigEditorBoolean
+        public boolean runCoinsInstaSell;
+
+        @Expose
+        @ConfigOption(name = "Achievements", desc = "Unlock achievements as you play (/shiny achievements).")
+        @ConfigEditorBoolean
+        public boolean achievementsEnabled;
+
+        @Expose
+        @ConfigOption(name = "Achievement sound", desc = "Play a sound when an achievement unlocks.")
+        @ConfigEditorBoolean
+        public boolean achievementSound;
+
+        @Expose
+        @ConfigOption(name = "Achievements to party", desc = "Also say \"Achievement unlocked: X!\" in party chat.")
+        @ConfigEditorBoolean
+        public boolean achievementsToParty;
+
+    }
+
     public static class SparklingLuckCategory {
 
         @Expose
-        @ConfigOption(name = "Tickets since sparkling", desc = "Count Safari tickets used since your last sparkling (HUD, chat on a catch, history hover).")
+        @ConfigOption(name = "Tickets since sparkling", desc = "Count Safari tickets used since anyone in the party last caught a sparkling (HUD, chat on a catch, history).")
         @ConfigEditorBoolean
         public boolean trackTicketsSinceSparkling;
 
         @Expose
-        @ConfigOption(name = "Tickets so far", desc = "Tickets used since your last sparkling. Set it by hand if you know it.")
+        @ConfigOption(name = "Tickets so far", desc = "Tickets used since the party's last sparkling. Set it by hand if you know it.")
         @ConfigEditorSlider(minValue = 0f, maxValue = 100000f, minStep = 1f)
         public int ticketsSinceSparkling;
 

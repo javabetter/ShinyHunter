@@ -63,6 +63,7 @@ public class ShinyHunterClient implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(SplitTracker::onClientTick);
         // After the trackers it clears, so a run boundary wipes state the same tick it's detected.
         ClientTickEvents.END_CLIENT_TICK.register(RunTracker::onClientTick);
+        ClientTickEvents.END_CLIENT_TICK.register(Achievements::onClientTick);
         ClientTickEvents.END_CLIENT_TICK.register(PartyChat::onClientTick);
 
         HotspotAnnouncer.register();
@@ -71,6 +72,8 @@ public class ShinyHunterClient implements ClientModInitializer {
         CapsuleAnnouncer.register();
         DowntimeTracker.register();
         SparklingHistory.register();
+        RunHistory.register();
+        Achievements.register();
         BirdFoodWatcher.register();
         TimerWatcher.register();
         CritterTracker.register();
@@ -185,7 +188,12 @@ public class ShinyHunterClient implements ClientModInitializer {
                 .then(literal("history")
                         .then(argument("page", IntegerArgumentType.integer(1))
                                 .executes(c -> showHistory(c, IntegerArgumentType.getInteger(c, "page"))))
-                        .executes(c -> showHistory(c, 1)))
+                        .then(literal("import").executes(ShinyHunterClient::importHistory))
+                        .executes(c -> openHistory(com.shinyhunter.gui.HistoryScreen.Tab.RUNS)))
+                .then(literal("achievements")
+                        .executes(c -> openHistory(com.shinyhunter.gui.HistoryScreen.Tab.ACHIEVEMENTS)))
+                .then(literal("stats")
+                        .executes(c -> openHistory(com.shinyhunter.gui.HistoryScreen.Tab.STATS)))
                 .then(literal("help").executes(ShinyHunterClient::showHelp))
                 .then(literal("dex")
                         .then(argument("player", StringArgumentType.word())
@@ -275,6 +283,23 @@ public class ShinyHunterClient implements ClientModInitializer {
         return Command.SINGLE_SUCCESS;
     }
 
+    private static int openHistory(com.shinyhunter.gui.HistoryScreen.Tab tab) {
+        Minecraft client = Minecraft.getInstance();
+        client.execute(() -> client.setScreenAndShow(new com.shinyhunter.gui.HistoryScreen(null, tab)));
+        return Command.SINGLE_SUCCESS;
+    }
+
+    /** {@code /shiny history import}: merges Downloads\sparkling-entries.json from shinylogs.vercel.app. */
+    private static int importHistory(CommandContext<FabricClientCommandSource> context) {
+        java.nio.file.Path file = SparklingHistory.defaultImportFile();
+        if (!java.nio.file.Files.exists(file)) {
+            return feedback(context, "§cNo sparkling-entries.json in Downloads. §7Make one at §fshinylogs.vercel.app§7 from old logs.");
+        }
+        int added = SparklingHistory.importFrom(file);
+        return feedback(context, added < 0 ? "§cCouldn't read " + file.getFileName() + "."
+                : "Imported §e" + added + "§r sparkling" + (added == 1 ? "" : "s") + " §7(duplicates skipped).");
+    }
+
     private static int showHistory(CommandContext<FabricClientCommandSource> context, int page) {
         for (Component line : SparklingHistory.lines(page)) {
             context.getSource().sendFeedback(line);
@@ -300,7 +325,10 @@ public class ShinyHunterClient implements ClientModInitializer {
                 {"/shiny hotspots", "reset hotspot claims"},
                 {"/shiny nests", "restore hidden bee nests"},
                 {"/shiny who", "who the Safari Manager guard is counting"},
-                {"/shiny history [page]", "every sparkling caught, newest first"},
+                {"/shiny history", "runs, bests, sparklings, achievements, stats"},
+                {"/shiny history <page>", "every sparkling caught, in chat"},
+                {"/shiny history import", "add old catches from shinylogs.vercel.app"},
+                {"/shiny achievements", "your achievements"},
                 {"/shiny nestsurvey [on|off|clear]", "record fixture bee nests to a file"},
                 {"/shiny hives", "which honeyhives are full, and what's known about each"},
                 {"/shiny zone", "the sidebar zone as the mod reads it"},

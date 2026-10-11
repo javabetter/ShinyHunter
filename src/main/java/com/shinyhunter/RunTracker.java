@@ -87,6 +87,7 @@ public final class RunTracker {
         // to survive that hop.
         SafariTimer.resetRun();
         runStartedAt = System.currentTimeMillis();
+        RunHistory.begin();
         ShinyHunterClient.LOGGER.info("New run ({}) — cleared shard trades and splits", why);
     }
 
@@ -98,7 +99,8 @@ public final class RunTracker {
         // Before the clock is reset: the bests are read off this run's splits, and which of them
         // count as personal depends on catches that are only all in once the run is over.
         SplitTracker.commitBests();
-        long onClock = SafariTimer.elapsedMillis();
+        long onClock = SafariTimer.isRunning() ? SafariTimer.elapsedMillis() : 0;
+        RunHistory.finish(duration, onClock, SplitTracker.splits());
         SafariTimer.resetRun();
 
         // A banked !dt is cashed in here, whatever the run's length — it only exists if somebody

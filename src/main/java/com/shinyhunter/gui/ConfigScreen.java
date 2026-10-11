@@ -248,6 +248,8 @@ public class ConfigScreen extends Screen {
                 () -> c.honeyHiveRange, v -> c.honeyHiveRange = v, 16, 512);
         bool("Beacon unknown hives", "Also beacon hives whose state isn't known yet, dimmer.",
                 () -> c.honeyHiveShowUnknown, v -> c.honeyHiveShowUnknown = v);
+        bool("Refill countdown", "Over a hive you looted, show how long until it refills. Remembered across restarts.",
+                () -> c.honeyHiveShowRefill, v -> c.honeyHiveShowRefill = v);
         bool("Nest survey", "Record fence+trapdoor bee nests to config/shinyhunter-nests.json.",
                 () -> c.surveyNests, v -> c.surveyNests = v);
         text("Survey area", "Where the nest survey runs. Blank means anywhere in Skyblock.",
@@ -304,10 +306,22 @@ public class ConfigScreen extends Screen {
                 () -> c.hideNestsWhenDone, v -> c.hideNestsWhenDone = v);
         text("Nest done colour", "Outline colour for nests after that critter is caught, e.g. FF4040.",
                 () -> c.beeNestDoneColor, v -> c.beeNestDoneColor = v);
+        section("History & achievements");
+        bool("Save runs", "Record every Safari run for /shiny history: length, catches, shards, sparklings, splits.",
+                () -> c.runHistoryEnabled, v -> c.runHistoryEnabled = v);
+        bool("Coins at insta-sell", "Value shards at the bazaar's instant-sell price instead of the sell-offer price.",
+                () -> c.runCoinsInstaSell, v -> c.runCoinsInstaSell = v);
+        bool("Achievements", "Unlock achievements as you play (/shiny achievements).",
+                () -> c.achievementsEnabled, v -> c.achievementsEnabled = v);
+        bool("Achievement sound", "Play a sound when an achievement unlocks.",
+                () -> c.achievementSound, v -> c.achievementSound = v);
+        bool("Achievements to party", "Also say \"Achievement unlocked: X!\" in party chat.",
+                () -> c.achievementsToParty, v -> c.achievementsToParty = v);
+
         section("Sparkling luck");
-        bool("Tickets since sparkling", "Count Safari tickets used since your last sparkling (HUD, chat on a catch, history hover).",
+        bool("Tickets since sparkling", "Count Safari tickets used since anyone in the party last caught a sparkling (HUD, chat on a catch, history).",
                 () -> c.trackTicketsSinceSparkling, v -> c.trackTicketsSinceSparkling = v);
-        number("Tickets so far", "Tickets used since your last sparkling. Set it by hand if you know it.",
+        number("Tickets so far", "Tickets used since the party's last sparkling. Set it by hand if you know it.",
                 () -> c.ticketsSinceSparkling, v -> c.ticketsSinceSparkling = v, 0, 100000);
 
         section("Party sparklings");

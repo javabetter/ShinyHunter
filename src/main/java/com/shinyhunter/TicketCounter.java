@@ -14,8 +14,8 @@ import net.minecraft.network.chat.Component;
  * </pre>
  * Only the server's own NPC line counts: it has to <i>start</i> with "[NPC] Safari Manager:",
  * which a party, guild or private message never does (those start with their channel), and only
- * system messages are read, never player chat. When you catch a sparkling, {@link SparklingHistory}
- * takes the count, shows it, and resets it.
+ * system messages are read, never player chat. When anyone in the party catches a sparkling,
+ * {@link SparklingHistory} takes the count, shows it, and resets it.
  */
 public final class TicketCounter {
 
@@ -49,6 +49,8 @@ public final class TicketCounter {
             if (said.equals(line)) {
                 config.ticketsSinceSparkling++;
                 config.save();
+                RunHistory.onTicket();
+                Achievements.onTicket();
                 ShinyHunterClient.LOGGER.info("Ticket used — {} since last sparkling", config.ticketsSinceSparkling);
                 return;
             }
@@ -56,10 +58,11 @@ public final class TicketCounter {
     }
 
     /**
-     * Called when you catch a sparkling: says how many tickets it took, resets the count, and
-     * returns it for the history entry. Null when the counter is switched off.
+     * Called when anyone in the party catches a sparkling — the count is the party's luck, not
+     * just yours: says how many tickets it took, resets the count, and returns it for the history
+     * entry. Null when the counter is switched off.
      */
-    public static Integer takeForCatch() {
+    public static Integer takeForCatch(String player) {
         ShinyConfig config = ShinyConfig.get();
         if (!config.trackTicketsSinceSparkling) {
             return null;
@@ -70,7 +73,8 @@ public final class TicketCounter {
         Minecraft client = Minecraft.getInstance();
         if (client.player != null) {
             client.player.sendSystemMessage(Component.literal("§b[Shiny Hunter] §fTook §e" + tickets
-                    + (tickets == 1 ? " §fticket" : " §ftickets") + " to find a §6§lSPARKLING§f critter"));
+                    + (tickets == 1 ? " §fticket" : " §ftickets") + " to find a §6§lSPARKLING§f critter"
+                    + (player.equalsIgnoreCase(client.player.getName().getString()) ? "" : " §7(" + player + ")")));
         }
         return tickets;
     }
