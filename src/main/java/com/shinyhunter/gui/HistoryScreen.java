@@ -85,6 +85,17 @@ public final class HistoryScreen extends Screen {
         }
     }
 
+    private enum AchievementSort {
+        DEFAULT("Unlocked first"), RARITY_UP("Rarity: low"), RARITY_DOWN("Rarity: high"),
+        CLOSEST("Closest"), RECENT("Recent"), NAME("Name");
+
+        final String label;
+
+        AchievementSort(String label) {
+            this.label = label;
+        }
+    }
+
     /** A clickable area collected while drawing. */
     private record Hit(int x, int y, int w, int h, Runnable action) {
         boolean contains(double mx, double my) {
@@ -102,6 +113,7 @@ public final class HistoryScreen extends Screen {
     private int selectedRun = -1;
     private boolean mineOnly;
     private AchievementFilter achievementFilter = AchievementFilter.ALL;
+    private AchievementSort achievementSort = AchievementSort.DEFAULT;
     private String status;
 
     /** The scrollable list area of the current tab, so the wheel only scrolls over it. */
@@ -250,18 +262,25 @@ public final class HistoryScreen extends Screen {
                 g.fill(px + 4, y - 1, px + pw - 4, y + ROW - 1, selected ? 0x40FFFFFF : 0x18FFFFFF);
             }
             boolean sparkle = run.hasSparkling();
-            if (sparkle) {
-                g.text(font, "✦", px + 8, y, PINK);
-                g.text(font, "✦", px + pw - 14, y, PINK);
-            }
             String when = WHEN.format(Instant.ofEpochMilli(run.start).atZone(ZoneId.systemDefault()));
-            centred(g, "#" + run.number, px + Math.round(pw * at[0]), y, sparkle ? PINK : TEXT);
-            centred(g, when, px + Math.round(pw * at[1]), y, sparkle ? 0xFFFF99EE : TEXT);
-            centred(g, clock(run.length) + (run.clocked ? "" : "*"), px + Math.round(pw * at[2]), y, sparkle ? 0xFFDD88FF : MUTED);
-            centred(g, run.party + "/" + total, px + Math.round(pw * at[3]), y, run.party >= total ? 0xFF55FF55 : 0xFFDDDDDD);
-            centred(g, run.you + "/" + total, px + Math.round(pw * at[4]), y, 0xFF77BBFF);
-            centred(g, String.valueOf(run.caught), px + Math.round(pw * at[5]), y, 0xFF88DD88);
-            centred(g, BazaarPrices.format(run.coins), px + Math.round(pw * at[6]), y, GOLD);
+            String[] cells = {"#" + run.number, when, clock(run.length) + (run.clocked ? "" : "*"),
+                    run.party + "/" + total, run.you + "/" + total, String.valueOf(run.caught),
+                    BazaarPrices.format(run.coins)};
+            if (sparkle) {
+                // A sparkling run is drawn in a shimmering rainbow, one colour per character
+                // flowing across the whole row.
+                rainbow(g, "✦", px + 8, y);
+                rainbow(g, "✦", px + pw - 14, y);
+                for (int c = 0; c < cells.length; c++) {
+                    rainbow(g, cells[c], px + Math.round(pw * at[c]) - font.width(cells[c]) / 2, y);
+                }
+            } else {
+                int[] colours = {TEXT, TEXT, MUTED, run.party >= total ? 0xFF55FF55 : 0xFFDDDDDD,
+                        0xFF77BBFF, 0xFF88DD88, GOLD};
+                for (int c = 0; c < cells.length; c++) {
+                    centred(g, cells[c], px + Math.round(pw * at[c]), y, colours[c]);
+                }
+            }
             hits.add(new Hit(px + 4, y - 1, pw - 8, ROW, () -> selectedRun = selectedRun == index ? -1 : index));
         }
         scrollbar(g, offset);
@@ -295,7 +314,7 @@ public final class HistoryScreen extends Screen {
             if (!parts.isEmpty()) {
                 // Splits take the line; the rest goes on hover over the detail.
                 if (mx >= px && mx < px + pw && my >= detailY && my < detailY + 22) {
-                    g.setTooltipForNextFrame(font, Component.literal(extra), mx, my);
+                    g.setComponentTooltipForNextFrame(font, List.of(Component.literal(extra)), mx, my);
                 }
             }
         } else if (!runs.isEmpty()) {
@@ -430,9 +449,12 @@ public final class HistoryScreen extends Screen {
             boolean hover = mx >= px + 4 && mx < px + listW + 4 && my >= y - 1 && my < y + ROW - 1;
             if (hover) {
                 g.fill(px + 4, y - 1, px + listW + 4, y + ROW - 1, 0x18FFFFFF);
-                g.setTooltipForNextFrame(font, Component.literal("§f" + FULL.format(when)
-                        + (entry.tickets == null ? "" : "\n§7Took §e" + entry.tickets + "§7 tickets since the last §6§lSPARKLING")),
-                        mx, my);
+                List<Component> tip = new ArrayList<>();
+                tip.add(Component.literal("§f" + FULL.format(when)));
+                if (entry.tickets != null) {
+                    tip.add(Component.literal("§7Took §e" + entry.tickets + "§7 tickets since the last §6§lSPARKLING"));
+                }
+                g.setComponentTooltipForNextFrame(font, tip, mx, my);
             }
             g.text(font, "§7" + DateTimeFormatter.ofPattern("MMM dd", Locale.ENGLISH).format(when), px + 10, y, MUTED);
             g.text(font, SparklingHistory.nameColour(entry.player) + entry.player, px + 70, y, TEXT);
@@ -529,8 +551,7 @@ public final class HistoryScreen extends Screen {
                 shown.add(def);
             }
         }
-        shown.sort(Comparator.comparing((Achievements.Def d) -> !Achievements.isUnlocked(d))
-                .thenComparing(d -> d.tier().ordinal()));
+        shown.sort(achievementOrder());
 
         g.text(font, "Achievements", px + 8, py + 6, GOLD);
         int percent = all.isEmpty() ? 0 : unlocked * 100 / all.size();
@@ -574,8 +595,10 @@ public final class HistoryScreen extends Screen {
             String description = hidden ? "Secret achievement — keep playing to find out." : def.description();
             g.text(font, cut(hidden ? "§8" : "§7", description, textW), px + 14, y + 12, MUTED);
             if (mx >= px + 6 && mx < px + pw - 12 && my >= y && my < y + rowH - 2) {
-                g.setTooltipForNextFrame(font, Component.literal((hidden ? "§8§l???" : def.tier().code + "§l" + def.name())
-                        + "\n" + tierLabel + "\n§7" + description), mx, my);
+                g.setComponentTooltipForNextFrame(font, List.of(
+                        Component.literal(hidden ? "§8§l???" : def.tier().code + "§l" + def.name()),
+                        Component.literal(tierLabel),
+                        Component.literal("§7" + description)), mx, my);
             }
 
             if (has) {
@@ -588,10 +611,42 @@ public final class HistoryScreen extends Screen {
         scrollbar(g, offset);
 
         int fy = py + ph - 20;
-        button(g, mx, my, px + 8, fy, 120, "Show: " + achievementFilter.label, () -> {
+        button(g, mx, my, px + 8, fy, 100, "Show: " + achievementFilter.label, () -> {
             achievementFilter = AchievementFilter.values()[(achievementFilter.ordinal() + 1) % AchievementFilter.values().length];
             scroll.put(Tab.ACHIEVEMENTS, 0);
         });
+        button(g, mx, my, px + 114, fy, 130, "Sort: " + achievementSort.label, () -> {
+            achievementSort = AchievementSort.values()[(achievementSort.ordinal() + 1) % AchievementSort.values().length];
+            scroll.put(Tab.ACHIEVEMENTS, 0);
+        });
+    }
+
+    /** The order for the current sort; ties always fall back to rarity, then name. */
+    private Comparator<Achievements.Def> achievementOrder() {
+        Comparator<Achievements.Def> rarity = Comparator.comparingInt(d -> d.tier().ordinal());
+        Comparator<Achievements.Def> name = Comparator.comparing(Achievements.Def::name, String.CASE_INSENSITIVE_ORDER);
+        Comparator<Achievements.Def> lockedLast = Comparator.comparing(d -> !Achievements.isUnlocked(d));
+        Comparator<Achievements.Def> order = switch (achievementSort) {
+            case DEFAULT -> lockedLast.thenComparing(rarity);
+            case RARITY_UP -> rarity;
+            case RARITY_DOWN -> rarity.reversed();
+            // Locked ones nearest their goal first; unlocked (and secret) ones after.
+            case CLOSEST -> Comparator.comparingDouble(HistoryScreen::remaining);
+            case RECENT -> Comparator.comparingLong((Achievements.Def d) -> -Achievements.unlockedAt(d));
+            case NAME -> name;
+        };
+        return order.thenComparing(rarity).thenComparing(name);
+    }
+
+    /** How far a locked achievement is from its goal, 0 to 1; done or unmeasurable ones sort last. */
+    private static double remaining(Achievements.Def def) {
+        if (Achievements.isUnlocked(def)) {
+            return 3;
+        }
+        if (!def.hasProgress()) {
+            return def.secret() ? 2.5 : 2;
+        }
+        return 1 - Math.min(1, (double) Achievements.progress(def) / def.goal());
     }
 
     private static Achievements.Def achievement(String id) {
@@ -773,6 +828,23 @@ public final class HistoryScreen extends Screen {
     /** The scale that fits {@code needed} pixels into {@code available}, never below 0.6. */
     private static float fit(int needed, int available) {
         return needed <= available ? 1f : Math.max(0.6f, (float) available / needed);
+    }
+
+    /**
+     * Text in a pastel rainbow: each character's hue comes from where it sits across the screen,
+     * drifting slowly with time, so a whole row reads as one shimmering gradient.
+     */
+    private void rainbow(GuiGraphicsExtractor g, String text, int x, int y) {
+        float drift = (System.currentTimeMillis() % 6000L) / 6000f;
+        int cx = x;
+        for (int i = 0; i < text.length(); ) {
+            int cp = text.codePointAt(i);
+            String ch = new String(Character.toChars(cp));
+            float hue = (cx / 140f + drift) % 1f;
+            g.text(font, ch, cx, y, 0xFF000000 | java.awt.Color.HSBtoRGB(hue, 0.45f, 1.0f));
+            cx += font.width(ch);
+            i += Character.charCount(cp);
+        }
     }
 
     private void centred(GuiGraphicsExtractor g, String text, int cx, int y, int colour) {
