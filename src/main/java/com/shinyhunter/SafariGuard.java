@@ -172,11 +172,12 @@ public final class SafariGuard {
     }
 
     /**
-     * True anywhere in the Safari, its entrance included — the manager stands at the door, which is
-     * a different zone from the hunting grounds proper.
+     * True anywhere on the Safari island, its entrance included — and never on Torrhus Canyon, whose
+     * Critter Safari zone shares the name.
      */
     private static boolean inSafariArea(Minecraft client, ShinyConfig config) {
-        return SkyblockSidebar.isAtOrWithin(client, config.huntLocation);
+        // The island, not the zone: Torrhus Canyon has a "Critter Safari" zone and a manager of its own.
+        return SkyblockSidebar.onSafariIsland(client);
     }
 
     // ------------------------------------------------------------------ identifying the NPC

@@ -174,6 +174,36 @@ public final class SkyblockSidebar {
     }
 
     /** The current zone's bare name: the ⏣ row with the glyph and surrounding space removed. */
+    /** The Safari island's name in the tab list; Torrhus Canyon's Critter Safari zone is on another island. */
+    public static final String SAFARI_ISLAND = "Critter Safari";
+
+    /**
+     * The island you're on, from the tab list's "Area: Torrhus Canyon" line — the same place SkyHanni
+     * reads it. The sidebar's zone can't tell islands apart: Torrhus Canyon has a zone called Critter
+     * Safari too. Null when the tab list shows no area (it can be customised away).
+     */
+    public static String islandName(Minecraft client) {
+        if (client.getConnection() == null) {
+            return null;
+        }
+        for (net.minecraft.client.multiplayer.PlayerInfo info : client.getConnection().getListedOnlinePlayers()) {
+            Component display = info.getTabListDisplayName();
+            if (display == null) {
+                continue;
+            }
+            String text = EntityDataProbe.stripFormatting(display.getString()).trim();
+            if (text.startsWith("Area: ")) {
+                return text.substring("Area: ".length()).trim();
+            }
+        }
+        return null;
+    }
+
+    /** True only on the Critter Safari island itself. */
+    public static boolean onSafariIsland(Minecraft client) {
+        return SAFARI_ISLAND.equalsIgnoreCase(islandName(client));
+    }
+
     public static String zoneName(Minecraft client) {
         String line = locationLine(client);
         return line.isEmpty() ? "" : line.replace(String.valueOf(ZONE_GLYPH), " ").trim();
