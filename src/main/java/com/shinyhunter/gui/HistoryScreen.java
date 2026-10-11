@@ -542,13 +542,24 @@ public final class HistoryScreen extends Screen {
             boolean hidden = def.secret() && !has;
             g.fill(px + 6, y, px + pw - 12, y + rowH - 2, has ? (def.tier().argb & 0x00FFFFFF) | 0x22000000 : 0x14FFFFFF);
             g.fill(px + 6, y, px + 9, y + rowH - 2, has ? def.tier().argb : 0xFF444444);
-            String name = hidden ? "§8§l???" : (has ? def.tier().code + "§l" : "§7§l") + def.name();
+            // The right-hand column (date or progress) is reserved; text on the left is cut to fit
+            // beside it, and the whole thing is on hover.
+            int right = px + pw - 18;
+            int textW = right - 100 - (px + 14);
+            String namePrefix = hidden ? "§8§l" : (has ? def.tier().code + "§l" : "§7§l");
+            String name = cut(namePrefix, hidden ? "???" : def.name(), textW);
             g.text(font, name, px + 14, y + 2, TEXT);
             String tierLabel = (has || !hidden ? def.tier().code : "§8") + def.tier().name();
-            g.text(font, tierLabel, px + 14 + font.width(name) + 6, y + 2, TEXT);
-            g.text(font, hidden ? "§8Secret achievement — keep playing to find out." : "§7" + def.description(), px + 14, y + 12, MUTED);
+            if (font.width(name) + 6 + font.width(tierLabel) <= textW) {
+                g.text(font, tierLabel, px + 14 + font.width(name) + 6, y + 2, TEXT);
+            }
+            String description = hidden ? "Secret achievement — keep playing to find out." : def.description();
+            g.text(font, cut(hidden ? "§8" : "§7", description, textW), px + 14, y + 12, MUTED);
+            if (mx >= px + 6 && mx < px + pw - 12 && my >= y && my < y + rowH - 2) {
+                g.setTooltipForNextFrame(font, Component.literal((hidden ? "§8§l???" : def.tier().code + "§l" + def.name())
+                        + "\n" + tierLabel + "\n§7" + description), mx, my);
+            }
 
-            int right = px + pw - 18;
             if (has) {
                 String when = "§a✔ §7" + DAY.format(Instant.ofEpochMilli(Achievements.unlockedAt(def)).atZone(ZoneId.systemDefault()));
                 g.text(font, when, right - font.width(when), y + 7, TEXT);
@@ -728,6 +739,18 @@ public final class HistoryScreen extends Screen {
         int value = Math.max(0, Math.min(max, scroll.getOrDefault(t, 0)));
         scroll.put(t, value);
         return value;
+    }
+
+    /** {@code prefix + text}, shortened with an ellipsis until it fits in {@code width} pixels. */
+    private String cut(String prefix, String text, int width) {
+        if (font.width(prefix + text) <= width) {
+            return prefix + text;
+        }
+        String shown = text;
+        while (!shown.isEmpty() && font.width(prefix + shown + "…") > width) {
+            shown = shown.substring(0, shown.length() - 1);
+        }
+        return prefix + shown.stripTrailing() + "…";
     }
 
     /** The scale that fits {@code needed} pixels into {@code available}, never below 0.6. */

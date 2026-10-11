@@ -404,6 +404,7 @@ public final class SparklingHistory {
         if (added > 0) {
             data.entries.sort((a, b) -> Long.compare(b.at, a.at));
             save();
+            Achievements.recheckHistory();
         }
         ShinyHunterClient.LOGGER.info("Imported {} sparkling(s) from {}", added, file);
         return added;

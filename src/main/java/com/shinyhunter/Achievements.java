@@ -541,20 +541,34 @@ public final class Achievements {
         for (RunHistory.Run run : RunHistory.runs()) {
             checkRun(run, false);
         }
-        for (SparklingHistory.Entry entry : ownEntries()) {
-            if (entry.critter.equals("Macaw") || entry.critter.equals("Wumpa") || entry.critter.equals("Doomspiral")) {
-                unlock(LEGENDARY_SPARKLE, false);
-            }
-            if (entry.critter.equals("Gemzie")) {
-                unlock(GEMZIE_SPARKLE, false);
-            }
-        }
+        checkHistoryCatches(false);
         save();
         int earned = data.unlocked.size() - before;
         if (earned > 0) {
             client.gui.getChat().addClientSystemMessage(Component.literal("§b[Shiny Hunter] §fAchievements are here! §7Your history already earns §e"
                     + earned + "§7 of them — see §f/shiny achievements§7."));
         }
+    }
+
+    /** The achievements earned by particular catches in your history. */
+    private static void checkHistoryCatches(boolean announce) {
+        for (SparklingHistory.Entry entry : ownEntries()) {
+            if (entry.critter.equals("Macaw") || entry.critter.equals("Wumpa") || entry.critter.equals("Doomspiral")) {
+                unlock(LEGENDARY_SPARKLE, announce);
+            }
+            if (entry.critter.equals("Gemzie")) {
+                unlock(GEMZIE_SPARKLE, announce);
+            }
+        }
+    }
+
+    /** After catches are imported: everything the bigger history now earns, announced. */
+    public static void recheckHistory() {
+        if (!data.initialised) {
+            return; // the first start will see the imported catches anyway
+        }
+        checkHistoryCatches(true);
+        checkAll(true);
     }
 
     // ------------------------------------------------------------------ reading
