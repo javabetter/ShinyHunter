@@ -71,11 +71,22 @@ public final class LogImporter {
     /** This mod's Forest-is-done-but-Macaw call: "Forest 8/9, missing Macaw". */
     private static final Pattern FOREST_NO_MACAW = Pattern.compile("^Forest \\d+/\\d+, missing Macaw$");
 
-    /** What one import found. */
-    public record Result(List<RunHistory.Run> runs, List<SparklingHistory.Entry> sparklings, int files) {
+    /** What one import found, and the newest archived log it read (by modification time). */
+    public record Result(List<RunHistory.Run> runs, List<SparklingHistory.Entry> sparklings, int files,
+                         long newestArchive) {
     }
 
     private static volatile boolean running;
+
+    /** Progress of the read in progress, by bytes of log files, for the action-bar bar. */
+    private static volatile long bytesTotal;
+    private static volatile long bytesDone;
+    private static volatile int filesTotal;
+    private static volatile int filesDone;
+
+    /** Whether the read in progress was asked for (and so shows its progress). */
+    private static boolean showProgress;
+    private static int progressTicks;
 
     private LogImporter() {
     }
@@ -90,10 +101,21 @@ public final class LogImporter {
 
     /** Reads every log in the folder off the client thread. */
     public static CompletableFuture<Result> read(Path folder, String self) {
+        return read(folder, self, true, -1);
+    }
+
+    /**
+     * Reads logs off the client thread.
+     *
+     * @param includeLatest whether {@code latest.log} (the session in progress) is read too
+     * @param newerThan     only archived logs modified after this; 0 means just the newest one, and
+     *                      -1 means all of them
+     */
+    static CompletableFuture<Result> read(Path folder, String self, boolean includeLatest, long newerThan) {
         running = true;
         return CompletableFuture.supplyAsync(() -> {
             try {
-                return readAll(folder, self);
+                return readAll(folder, self, includeLatest, newerThan);
             } finally {
                 running = false;
             }
@@ -102,42 +124,65 @@ public final class LogImporter {
 
     // ------------------------------------------------------------------ reading
 
-    private record LogFile(Path path, LocalDate day, int order) {
+    private record LogFile(Path path, LocalDate day, int order, long modified) {
     }
 
-    private static Result readAll(Path folder, String self) {
+    private static Result readAll(Path folder, String self, boolean includeLatest, long newerThan) {
         List<LogFile> files = new ArrayList<>();
         try (Stream<Path> listing = Files.list(folder)) {
             for (Path path : (Iterable<Path>) listing::iterator) {
                 String name = path.getFileName().toString();
                 Matcher m = FILE_NAME.matcher(name);
                 if (m.matches()) {
+                    long modified = Files.getLastModifiedTime(path).toMillis();
                     files.add(new LogFile(path, LocalDate.of(Integer.parseInt(m.group(1)),
-                            Integer.parseInt(m.group(2)), Integer.parseInt(m.group(3))), Integer.parseInt(m.group(4))));
+                            Integer.parseInt(m.group(2)), Integer.parseInt(m.group(3))), Integer.parseInt(m.group(4)),
+                            modified));
                 }
             }
         } catch (IOException e) {
             ShinyHunterClient.LOGGER.warn("Couldn't list logs in {}", folder, e);
         }
         files.sort((a, b) -> a.day().equals(b.day()) ? Integer.compare(a.order(), b.order()) : a.day().compareTo(b.day()));
+        long newest = 0;
+        for (LogFile file : files) {
+            newest = Math.max(newest, file.modified());
+        }
+        if (newerThan == 0) {
+            // Nothing read before: just the most recently archived log.
+            final long last = newest;
+            files.removeIf(file -> file.modified() != last);
+        } else if (newerThan > 0) {
+            files.removeIf(file -> file.modified() <= newerThan);
+        }
         Path latest = folder.resolve("latest.log");
-        if (Files.exists(latest)) {
+        if (includeLatest && Files.exists(latest)) {
             try {
                 LocalDate day = LocalDateTime.ofInstant(Files.getLastModifiedTime(latest).toInstant(),
                         ZoneId.systemDefault()).toLocalDate();
-                files.add(new LogFile(latest, day, Integer.MAX_VALUE));
+                files.add(new LogFile(latest, day, Integer.MAX_VALUE, 0));
             } catch (IOException ignored) {
                 // no date, no latest.log
             }
         }
 
+        long total = 0;
+        for (LogFile file : files) {
+            total += sizeOf(file.path());
+        }
+        bytesTotal = Math.max(1, total);
+        bytesDone = 0;
+        filesTotal = files.size();
+        filesDone = 0;
         Parser parser = new Parser(self);
         for (LogFile file : files) {
             parser.read(file);
+            bytesDone += sizeOf(file.path());
+            filesDone++;
         }
         ShinyHunterClient.LOGGER.info("Log import: {} file(s), {} run(s), {} sparkling(s)",
                 files.size(), parser.runs.size(), parser.sparklings.size());
-        return new Result(parser.runs, parser.sparklings, files.size());
+        return new Result(parser.runs, parser.sparklings, files.size(), newest);
     }
 
     /** Walks the logs in order, carrying a run across nothing — each log file closes its own. */
@@ -351,21 +396,19 @@ public final class LogImporter {
             return;
         }
         String self = client.player == null ? "" : client.player.getName().getString();
-        tell("§7Reading your logs for past runs… this can take a little while.");
+        tell("§7Reading your logs for past runs… progress is shown above your hotbar.");
+        showProgress = true;
         read(folder, self).whenComplete((result, error) -> client.execute(() -> {
+            showProgress = false;
+            if (client.player != null) {
+                client.player.sendOverlayMessage(Component.literal("§aLog import done!"));
+            }
             if (error != null || result == null) {
                 tell("§cThe log import failed — see the game log.");
                 ShinyHunterClient.LOGGER.warn("Log import failed", error);
                 return;
             }
-            int runs = RunHistory.importRuns(result.runs());
-            boolean bests = false;
-            for (RunHistory.Run run : result.runs()) {
-                bests |= SplitTracker.offerPastRun(run.splits, run.catches);
-            }
-            if (bests) {
-                ShinyConfig.get().save();
-            }
+            int runs = merge(result);
             int catches = SparklingHistory.importEntries(result.sparklings());
             int fromSite = 0;
             Path site = SparklingHistory.defaultImportFile();
@@ -378,6 +421,84 @@ public final class LogImporter {
                     + (fromSite > 0 ? " §7(" + fromSite + " from sparkling-entries.json)" : "")
                     + "§f. " + (earned > 0 ? "§6" + earned + " achievement" + (earned == 1 ? "" : "s") + " unlocked! " : "")
                     + "§7Already-saved runs were skipped.");
+        }));
+    }
+
+    /** {@code Importing logs ■■■■■■□□□□□□ 48% (171/356 files)}, by bytes read. */
+    private static String progressBar() {
+        int width = 24;
+        double fraction = Math.min(1, (double) bytesDone / Math.max(1, bytesTotal));
+        int filled = (int) Math.round(fraction * width);
+        return "§bImporting logs §a" + "■".repeat(filled) + "§8" + "■".repeat(width - filled)
+                + " §f" + Math.round(fraction * 100) + "% §7(" + filesDone + "/" + Math.max(filesTotal, filesDone) + " files)";
+    }
+
+    private static long sizeOf(Path path) {
+        try {
+            return Files.size(path);
+        } catch (IOException e) {
+            return 0;
+        }
+    }
+
+    /** Adds a result's runs and offers their splits to the bests. Returns how many runs were new. */
+    private static int merge(Result result) {
+        int runs = RunHistory.importRuns(result.runs());
+        boolean bests = false;
+        for (RunHistory.Run run : result.runs()) {
+            bests |= SplitTracker.offerPastRun(run.splits, run.catches);
+        }
+        ShinyConfig config = ShinyConfig.get();
+        if (result.newestArchive() > config.logsImportedUpTo) {
+            config.logsImportedUpTo = result.newestArchive();
+            bests = true;
+        }
+        if (bests) {
+            config.save();
+        }
+        return runs;
+    }
+
+    // ------------------------------------------------------------------ on launch
+
+    private static boolean autoDone;
+
+    /**
+     * Once per launch, when you're in game: quietly reads any archived log newer than the last one
+     * read — normally just the session that rolled over on this launch. Minecraft keeps only 7 logs
+     * per day and deletes the oldest of a day on the 8th launch, so this saves a busy day's runs
+     * before they can go. Says something only if it found runs the mod didn't already have.
+     */
+    public static void onClientTick(Minecraft client) {
+        if (showProgress && running && client.player != null && ++progressTicks >= 4) {
+            progressTicks = 0;
+            client.player.sendOverlayMessage(Component.literal(progressBar()));
+        }
+        if (autoDone || client.player == null || running) {
+            return;
+        }
+        autoDone = true;
+        ShinyConfig config = ShinyConfig.get();
+        if (!config.autoImportLogs || !config.runHistoryEnabled || !Files.isDirectory(defaultLogs())) {
+            return;
+        }
+        String self = client.player.getName().getString();
+        read(defaultLogs(), self, false, config.logsImportedUpTo).whenComplete((result, error) -> client.execute(() -> {
+            if (error != null || result == null) {
+                ShinyHunterClient.LOGGER.warn("Automatic log import failed", error);
+                return;
+            }
+            int runs = merge(result);
+            int catches = SparklingHistory.importEntries(result.sparklings());
+            int earned = Achievements.afterImport();
+            ShinyHunterClient.LOGGER.info("Automatic log import: {} file(s), {} new run(s), {} new sparkling(s)",
+                    result.files(), runs, catches);
+            if (runs > 0 || catches > 0) {
+                tell("§7Saved §f" + runs + "§7 run" + (runs == 1 ? "" : "s")
+                        + (catches > 0 ? " and §f" + catches + "§7 sparkling" + (catches == 1 ? "" : "s") : "")
+                        + " from your last session's log." + (earned > 0 ? " §6" + earned + " achievement"
+                        + (earned == 1 ? "" : "s") + " unlocked!" : ""));
+            }
         }));
     }
 

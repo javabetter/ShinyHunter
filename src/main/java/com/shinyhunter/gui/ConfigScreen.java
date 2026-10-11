@@ -309,6 +309,8 @@ public class ConfigScreen extends Screen {
         section("History & achievements");
         bool("Save runs", "Record every Safari run for /shiny history: length, catches, shards, sparklings, splits.",
                 () -> c.runHistoryEnabled, v -> c.runHistoryEnabled = v);
+        bool("Import logs on launch", "Save runs from your last session's log when the game starts. Minecraft only keeps 7 logs a day.",
+                () -> c.autoImportLogs, v -> c.autoImportLogs = v);
         bool("Coins at insta-sell", "Value shards at the bazaar's instant-sell price instead of the sell-offer price.",
                 () -> c.runCoinsInstaSell, v -> c.runCoinsInstaSell = v);
         bool("Achievements", "Unlock achievements as you play (/shiny achievements).",

@@ -64,6 +64,7 @@ public class ShinyHunterClient implements ClientModInitializer {
         // After the trackers it clears, so a run boundary wipes state the same tick it's detected.
         ClientTickEvents.END_CLIENT_TICK.register(RunTracker::onClientTick);
         ClientTickEvents.END_CLIENT_TICK.register(Achievements::onClientTick);
+        ClientTickEvents.END_CLIENT_TICK.register(LogImporter::onClientTick);
         ClientTickEvents.END_CLIENT_TICK.register(PartyChat::onClientTick);
 
         HotspotAnnouncer.register();

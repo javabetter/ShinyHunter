@@ -50,6 +50,12 @@ public final class ShinyConfig {
     /** When {@link #safariPlaytimeMinutes} was read. */
     public long safariPlaytimeReadAt = 0;
 
+    /** On launch, save runs from the log that just rolled over (Minecraft only keeps 7 a day). */
+    public boolean autoImportLogs = true;
+
+    /** Modification time of the newest archived log already imported. */
+    public long logsImportedUpTo = 0;
+
     /** Unlock achievements (/shiny achievements). */
     public boolean achievementsEnabled = true;
 

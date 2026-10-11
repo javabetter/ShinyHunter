@@ -483,6 +483,11 @@ public class ShinyMoulConfig extends Config {
         public boolean runHistoryEnabled;
 
         @Expose
+        @ConfigOption(name = "Import logs on launch", desc = "Save runs from your last session's log when the game starts. Minecraft only keeps 7 logs a day.")
+        @ConfigEditorBoolean
+        public boolean autoImportLogs;
+
+        @Expose
         @ConfigOption(name = "Coins at insta-sell", desc = "Value shards at the bazaar's instant-sell price instead of the sell-offer price.")
         @ConfigEditorBoolean
         public boolean runCoinsInstaSell;
