@@ -92,8 +92,6 @@ public final class Achievements {
 
     // ---- sparkling luck
     static final Def FIRST_SPARKLE = event("first_sparkle", "First Sparkle", "Catch your first sparkling critter.", Tier.COMMON);
-    static final Def DOUBLE_SPARKLE = event("double_sparkle", "Double Sparkle", "Catch 2 sparklings yourself in one run.", Tier.EPIC);
-    static final Def TRIPLE_SPARKLE = event("triple_sparkle", "Triple Sparkle", "Catch 3 sparklings yourself in one run.", Tier.MYTHIC);
     static final Def PARTY_DOUBLE = event("party_double", "Shared Shine", "Your party catches 2 sparklings in one run.", Tier.RARE);
     static final Def PARTY_TRIPLE = event("party_triple", "Sparkle Storm", "Your party catches 3 sparklings in one run.", Tier.LEGENDARY);
     static final Def SPARKLE_10 = add("sparkle_10", "Glimmer", "Catch 10 sparklings.", Tier.UNCOMMON, Measure.OWN_SPARKLINGS, 10);
@@ -117,19 +115,19 @@ public final class Achievements {
     static final Def DRY_30 = add("dry_runs_30", "Cursed", "30 runs in a row without catching a sparkling.", Tier.EPIC, Measure.DRY_SPARKLING, 30);
     static final Def DRY_40 = add("dry_runs_40", "Forsaken", "40 runs in a row without catching a sparkling.", Tier.LEGENDARY, Measure.DRY_SPARKLING, 40);
     static final Def DRY_50 = add("dry_runs_50", "Doomed", "50 runs in a row without catching a sparkling.", Tier.MYTHIC, Measure.DRY_SPARKLING, 50);
-    static final Def NO_UNIQUE_25 = add("no_unique_runs_25", "Same Old Sparkle", "25 runs in a row without a new unique sparkling.", Tier.RARE, Measure.DRY_UNIQUE, 25);
-    static final Def NO_UNIQUE_50 = add("no_unique_runs_50", "Déjà Vu", "50 runs in a row without a new unique sparkling.", Tier.EPIC, Measure.DRY_UNIQUE, 50);
-    static final Def NO_UNIQUE_75 = add("no_unique_runs_75", "Groundhog Day", "75 runs in a row without a new unique sparkling.", Tier.LEGENDARY, Measure.DRY_UNIQUE, 75);
-    static final Def NO_UNIQUE_100 = add("no_unique_runs_100", "Broken Record", "100 runs in a row without a new unique sparkling.", Tier.MYTHIC, Measure.DRY_UNIQUE, 100);
+    static final Def NO_UNIQUE_5 = add("no_unique_runs_5", "Same Old Sparkle", "5 runs in a row without a new unique sparkling.", Tier.RARE, Measure.DRY_UNIQUE, 5);
+    static final Def NO_UNIQUE_10 = add("no_unique_runs_10", "Déjà Vu", "10 runs in a row without a new unique sparkling.", Tier.EPIC, Measure.DRY_UNIQUE, 10);
+    static final Def NO_UNIQUE_25 = add("no_unique_runs_25", "Groundhog Day", "25 runs in a row without a new unique sparkling.", Tier.LEGENDARY, Measure.DRY_UNIQUE, 25);
+    static final Def NO_UNIQUE_50 = add("no_unique_runs_50", "Broken Record", "50 runs in a row without a new unique sparkling.", Tier.MYTHIC, Measure.DRY_UNIQUE, 50);
 
     // ---- Macaw
     static final Def MACAW_3 = event("macaw_3", "Bird Watcher", "Your party secures 3 Macaws in one run.", Tier.RARE);
-    static final Def MACAW_5 = event("macaw_5", "Flock Together", "Your party secures 5 Macaws in one run.", Tier.EPIC);
+    static final Def MACAW_4 = event("macaw_4", "Flock Together", "Your party secures 4 Macaws in one run.", Tier.EPIC);
     static final Def MACAW_8 = event("macaw_8", "Macaw Mania", "Your party secures 8 Macaws in one run.", Tier.LEGENDARY);
-    static final Def NO_MACAW_10 = add("no_macaw_10", "Where's the Macaw?", "10 runs in a row without a Macaw.", Tier.UNCOMMON, Measure.RUNS_SINCE_MACAW, 10);
-    static final Def NO_MACAW_25 = add("no_macaw_25", "Macaw Drought", "25 runs in a row without a Macaw.", Tier.RARE, Measure.RUNS_SINCE_MACAW, 25);
-    static final Def NO_MACAW_50 = add("no_macaw_50", "Extinct", "50 runs in a row without a Macaw.", Tier.EPIC, Measure.RUNS_SINCE_MACAW, 50);
-    static final Def NO_MACAW_100 = add("no_macaw_100", "Myth of the Macaw", "100 runs in a row without a Macaw.", Tier.MYTHIC, Measure.RUNS_SINCE_MACAW, 100);
+    static final Def NO_MACAW_3 = add("no_macaw_3", "Where's the Macaw?", "3 runs in a row without a Macaw.", Tier.UNCOMMON, Measure.RUNS_SINCE_MACAW, 3);
+    static final Def NO_MACAW_5 = add("no_macaw_5", "Macaw Drought", "5 runs in a row without a Macaw.", Tier.RARE, Measure.RUNS_SINCE_MACAW, 5);
+    static final Def NO_MACAW_8 = add("no_macaw_8", "Extinct", "8 runs in a row without a Macaw.", Tier.EPIC, Measure.RUNS_SINCE_MACAW, 8);
+    static final Def NO_MACAW_10 = add("no_macaw_10", "Myth of the Macaw", "10 runs in a row without a Macaw.", Tier.MYTHIC, Measure.RUNS_SINCE_MACAW, 10);
 
     // ---- drops and emblems
     static final Def EMERALD_DYE = event("emerald_dye", "Emerald Dye", "Find an Emerald Dye.", Tier.DIVINE);
@@ -137,17 +135,17 @@ public final class Achievements {
     static final Def EMBLEMS_5 = add("emblem_5", "Emblem Collector", "Unlock 5 emblems.", Tier.LEGENDARY, Measure.EMBLEMS, 5);
 
     // ---- runs
-    static final Def RUN_1 = add("run_1", "Safari Rookie", "Finish a Safari run.", Tier.COMMON, Measure.RUNS, 1);
-    static final Def RUN_100 = add("run_100", "Regular", "Finish 100 Safari runs.", Tier.UNCOMMON, Measure.RUNS, 100);
-    static final Def RUN_500 = add("run_500", "Ranger", "Finish 500 Safari runs.", Tier.RARE, Measure.RUNS, 500);
-    static final Def RUN_1000 = add("run_1000", "Warden of the Wilds", "Finish 1,000 Safari runs.", Tier.EPIC, Measure.RUNS, 1000);
-    static final Def RUN_2500 = add("run_2500", "Lives Here Now", "Finish 2,500 Safari runs.", Tier.LEGENDARY, Measure.RUNS, 2500);
+    static final Def RUN_10 = add("run_10", "Safari Rookie", "Finish 10 Safari runs.", Tier.COMMON, Measure.RUNS, 10);
+    static final Def RUN_50 = add("run_50", "Regular", "Finish 50 Safari runs.", Tier.UNCOMMON, Measure.RUNS, 50);
+    static final Def RUN_100 = add("run_100", "Ranger", "Finish 100 Safari runs.", Tier.RARE, Measure.RUNS, 100);
+    static final Def RUN_500 = add("run_500", "Warden of the Wilds", "Finish 500 Safari runs.", Tier.EPIC, Measure.RUNS, 500);
     static final Def HOURS_10 = add("hours_10", "Time Flies", "Spend 10 hours on Safari runs.", Tier.UNCOMMON, Measure.HOURS, 10);
-    static final Def HOURS_100 = add("hours_100", "No Life", "Spend 100 hours on Safari runs.", Tier.EPIC, Measure.HOURS, 100);
-    static final Def CAUGHT_1000 = add("caught_1000", "Catcher", "Catch 1,000 critters.", Tier.UNCOMMON, Measure.CAUGHT, 1000);
-    static final Def CAUGHT_10000 = add("caught_10000", "Trapper", "Catch 10,000 critters.", Tier.RARE, Measure.CAUGHT, 10000);
-    static final Def CAUGHT_50000 = add("caught_50000", "Exterminator", "Catch 50,000 critters.", Tier.EPIC, Measure.CAUGHT, 50000);
-    static final Def CAUGHT_100000 = add("caught_100000", "Critter Apocalypse", "Catch 100,000 critters.", Tier.LEGENDARY, Measure.CAUGHT, 100000);
+    static final Def HOURS_50 = add("hours_50", "No Life", "Spend 50 hours on Safari runs.", Tier.EPIC, Measure.HOURS, 50);
+    static final Def CAUGHT_1000 = add("party_caught_1000", "Catcher", "Your party catches 1,000 critters with you.", Tier.UNCOMMON, Measure.CAUGHT, 1000);
+    static final Def CAUGHT_5000 = add("party_caught_5000", "Trapper", "Your party catches 5,000 critters with you.", Tier.RARE, Measure.CAUGHT, 5000);
+    static final Def CAUGHT_10000 = add("party_caught_10000", "Exterminator", "Your party catches 10,000 critters with you.", Tier.EPIC, Measure.CAUGHT, 10000);
+    static final Def CAUGHT_25000 = add("party_caught_25000", "Critter Apocalypse", "Your party catches 25,000 critters with you.", Tier.LEGENDARY, Measure.CAUGHT, 25000);
+    static final Def CAUGHT_50000 = add("party_caught_50000", "Extinction Event", "Your party catches 50,000 critters with you.", Tier.MYTHIC, Measure.CAUGHT, 50000);
     static final Def COINS_100M = add("coins_100m", "Shard Shark", "Earn 100M coins of shards from runs.", Tier.RARE, Measure.COINS, 100_000_000L);
     static final Def COINS_1B = add("coins_1b", "Shard Tycoon", "Earn 1B coins of shards from runs.", Tier.LEGENDARY, Measure.COINS, 1_000_000_000L);
     static final Def FULL_HOUSE = event("full_house", "Full House", "Your party secures all 37 critters in a run.", Tier.UNCOMMON);
@@ -155,6 +153,7 @@ public final class Achievements {
     static final Def SPEED_230 = event("speed_230", "Any%", "Secure all 37 critters in under 2:30.", Tier.LEGENDARY);
     static final Def TEN_OF_37 = event("ten_of_37", "Pulling Your Weight", "Catch 10 different critters yourself in a run.", Tier.RARE);
     static final Def CONTESTS_10 = add("contests_10", "Contestant", "Complete 10 of Miria's contests.", Tier.UNCOMMON, Measure.CONTESTS, 10);
+    static final Def CONTESTS_50 = add("contests_50", "Honey Hoarder", "Complete 50 of Miria's contests.", Tier.RARE, Measure.CONTESTS, 50);
     static final Def CONTESTS_100 = add("contests_100", "Miria's Favourite", "Complete 100 of Miria's contests.", Tier.EPIC, Measure.CONTESTS, 100);
 
     // ---- secrets
@@ -199,6 +198,8 @@ public final class Achievements {
         boolean uniqueSinceLastRun;
         /** Whether the run counters have been seeded from the ticket counters (one ticket per run). */
         boolean runCountersSeeded;
+        /** Which version of the achievement list the unlocks were last checked against. */
+        int listVersion;
     }
 
     private static Data data = new Data();
@@ -229,6 +230,9 @@ public final class Achievements {
         if (!data.runCountersSeeded) {
             seedRunCounters();
             checkAll(true);
+        }
+        if (data.listVersion < LIST_VERSION) {
+            relist(client);
         }
         // The party dex lookups can arrive any time; that's where your full sparkling dex comes from.
         if (++tickCounter >= 200) {
@@ -407,15 +411,13 @@ public final class Achievements {
     }
 
     private static void checkRunSparklings(RunHistory.Run run, boolean announce) {
-        unlockIf(run.ownSparklings >= 2, DOUBLE_SPARKLE, announce);
-        unlockIf(run.ownSparklings >= 3, TRIPLE_SPARKLE, announce);
         unlockIf(run.sparklings.size() >= 2, PARTY_DOUBLE, announce);
         unlockIf(run.sparklings.size() >= 3, PARTY_TRIPLE, announce);
     }
 
     private static void checkMacaws(RunHistory.Run run, boolean announce) {
         unlockIf(run.macaws >= 3, MACAW_3, announce);
-        unlockIf(run.macaws >= 5, MACAW_5, announce);
+        unlockIf(run.macaws >= 4, MACAW_4, announce);
         unlockIf(run.macaws >= 8, MACAW_8, announce);
     }
 
@@ -432,9 +434,10 @@ public final class Achievements {
             case RUNS -> RunHistory.runs().size();
             case HOURS -> PlaytimeReader.safariMillis() / 3_600_000L;
             case CAUGHT -> {
+                // Yours plus your party's: a teammate's catch reaches you as a loot share.
                 long caught = 0;
                 for (RunHistory.Run run : RunHistory.runs()) {
-                    caught += run.caught;
+                    caught += run.caught + run.lootShares;
                 }
                 yield caught;
             }
@@ -605,6 +608,34 @@ public final class Achievements {
         checkAll(false);
         save();
         return data.unlocked.size() - before;
+    }
+
+    /** Bump whenever achievements are added, removed or re-tuned. */
+    private static final int LIST_VERSION = 2;
+
+    /**
+     * The achievement list changed: drop unlocks of achievements that no longer exist, and unlock
+     * whatever the new thresholds already give — quietly, with one line saying how many — rather
+     * than a fanfare per achievement.
+     */
+    private static void relist(Minecraft client) {
+        data.listVersion = LIST_VERSION;
+        Set<String> ids = new java.util.HashSet<>();
+        for (Def def : ALL) {
+            ids.add(def.id());
+        }
+        data.unlocked.keySet().removeIf(id -> !ids.contains(id));
+        int before = data.unlocked.size();
+        checkAll(false);
+        for (RunHistory.Run run : RunHistory.runs()) {
+            checkRun(run, false);
+        }
+        save();
+        int earned = data.unlocked.size() - before;
+        if (earned > 0) {
+            client.gui.getChat().addClientSystemMessage(Component.literal("§b[Shiny Hunter] §fAchievements were re-tuned: §e"
+                    + earned + "§f unlocked with the new numbers. §7See /shiny achievements."));
+        }
     }
 
     // ------------------------------------------------------------------ reading
