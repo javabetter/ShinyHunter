@@ -4,6 +4,7 @@ import com.shinyhunter.Achievements;
 import com.shinyhunter.BazaarPrices;
 import com.shinyhunter.CritterDex;
 import com.shinyhunter.Edition;
+import com.shinyhunter.EntityDataProbe;
 import com.shinyhunter.PlaytimeReader;
 import com.shinyhunter.RunHistory;
 import com.shinyhunter.SafariTimer;
@@ -307,7 +308,8 @@ public final class HistoryScreen extends Screen {
             for (Map.Entry<String, Long> split : detail.splits.entrySet()) {
                 parts.add("§f" + split.getKey() + " §b" + SafariTimer.format(split.getValue()));
             }
-            String extra = "§7Macaws §f" + detail.macaws + "  §7Loot shares §f" + detail.lootShares
+            String extra = "§7Macaws §f" + detail.macaws + "  §7Rainbow Feathers §f" + detail.feathers
+                    + "  §7Loot shares §f" + detail.lootShares
                     + "  §7Tickets §f" + detail.tickets
                     + (detail.imported ? "  §8(from old logs — approximate, no splits)" : "  §7Party §f" + detail.partySize);
             centred(g, parts.isEmpty() ? extra : String.join(" §8· ", parts), px + pw / 2, detailY + 11, TEXT);
@@ -589,8 +591,8 @@ public final class HistoryScreen extends Screen {
             String name = cut(namePrefix, hidden ? "???" : def.name(), textW);
             g.text(font, name, px + 14, y + 2, TEXT);
             String tierLabel = (has || !hidden ? def.tier().code : "§8") + def.tier().name();
-            if (font.width(name) + 6 + font.width(tierLabel) <= textW) {
-                g.text(font, tierLabel, px + 14 + font.width(name) + 6, y + 2, TEXT);
+            if (shownWidth(name) + 8 + font.width(tierLabel) <= textW) {
+                g.text(font, tierLabel, px + 14 + shownWidth(name) + 8, y + 2, TEXT);
             }
             String description = hidden ? "Secret achievement — keep playing to find out." : def.description();
             g.text(font, cut(hidden ? "§8" : "§7", description, textW), px + 14, y + 12, MUTED);
@@ -671,6 +673,7 @@ public final class HistoryScreen extends Screen {
         int withMacaw = 0;
         int macaws = 0;
         int fullClears = 0;
+        int feathers = 0;
         Map<String, Integer> byCritter = new LinkedHashMap<>();
         for (RunHistory.Run run : runs) {
             played += run.length;
@@ -681,6 +684,7 @@ public final class HistoryScreen extends Screen {
             macaws += run.macaws;
             withMacaw += run.macaws > 0 ? 1 : 0;
             fullClears += run.party >= CritterDex.total() ? 1 : 0;
+            feathers += run.feathers;
             for (int n : run.shards.values()) {
                 shards += n;
             }
@@ -706,7 +710,8 @@ public final class HistoryScreen extends Screen {
                 {"Critters caught", String.format(Locale.ROOT, "%,d", caught)},
                 {"Loot shares", String.format(Locale.ROOT, "%,d", loot)},
                 {"Shards", String.format(Locale.ROOT, "%,d", shards)},
-                {"Shard value", "§e" + BazaarPrices.format(coins) + (played > 0 ? " §7· " + BazaarPrices.format(coins * 3_600_000L / played) + "/h" : "")},
+                {"Rainbow Feathers", String.valueOf(feathers)},
+                {"Shard + feather value", "§e" + BazaarPrices.format(coins) + (played > 0 ? " §7· " + BazaarPrices.format(coins * 3_600_000L / played) + "/h" : "")},
                 {"Tickets (in runs)", String.format(Locale.ROOT, "%,d", tickets)},
                 {"Sparklings (you / seen)", ownSparklings + " / " + SparklingHistory.entries().size()},
                 {"Sparkling dex", Achievements.ownDex().size() + "/" + CritterDex.total()},
@@ -813,13 +818,26 @@ public final class HistoryScreen extends Screen {
         return value;
     }
 
+    /**
+     * How wide text will actually come out. Bold text is given a pixel per character on top of what
+     * the font reports: some fonts (resource packs especially) draw bold wider than they measure it,
+     * which put the rarity label on top of the achievement's name.
+     */
+    private int shownWidth(String text) {
+        int width = font.width(text);
+        if (text.contains("§l")) {
+            width += EntityDataProbe.stripFormatting(text).length();
+        }
+        return width;
+    }
+
     /** {@code prefix + text}, shortened with an ellipsis until it fits in {@code width} pixels. */
     private String cut(String prefix, String text, int width) {
-        if (font.width(prefix + text) <= width) {
+        if (shownWidth(prefix + text) <= width) {
             return prefix + text;
         }
         String shown = text;
-        while (!shown.isEmpty() && font.width(prefix + shown + "…") > width) {
+        while (!shown.isEmpty() && shownWidth(prefix + shown + "…") > width) {
             shown = shown.substring(0, shown.length() - 1);
         }
         return prefix + shown.stripTrailing() + "…";

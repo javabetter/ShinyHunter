@@ -57,7 +57,6 @@ public final class LogImporter {
 
     private static final Pattern SENDING = Pattern.compile("^Sending to server \\S+\\.\\.\\.$");
     private static final Pattern SPARKLING = Pattern.compile("^SPARKLING! ([A-Za-z0-9_]{1,16}) caught a SPARKLING (.+?)!$");
-    private static final Pattern QUANTITY = Pattern.compile("(\\d+)x\\s");
 
     /** A party chat line: the message after the sender. */
     private static final Pattern PARTY_LINE = Pattern.compile("^Party > [^:]*?: (.+)$");
@@ -251,6 +250,10 @@ public final class LogImporter {
                 close(at);
                 return;
             }
+            if (text.equals(RunHistory.MACAW_BONUS)) {
+                run.feathers++;
+                return;
+            }
             if (text.startsWith("HOTSPOT!") || text.startsWith("HEAD START!")) {
                 if (clockStart == 0) {
                     clockStart = at;
@@ -277,8 +280,12 @@ public final class LogImporter {
                 run.macaws++;
             }
             if (text.contains("Shard")) {
-                Matcher quantity = QUANTITY.matcher(text);
+                Matcher quantity = RunHistory.QUANTITY.matcher(text);
                 run.shards.merge(critter, quantity.find() ? Integer.parseInt(quantity.group(1)) : 1, Integer::sum);
+            }
+            Matcher feathers = RunHistory.FEATHERS.matcher(text);
+            if (feathers.find()) {
+                run.feathers += feathers.group(1) == null ? 1 : Integer.parseInt(feathers.group(1));
             }
         }
 

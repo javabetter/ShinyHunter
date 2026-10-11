@@ -36,7 +36,13 @@ public final class RunHistory {
     private static final Pattern LOOT_SHARE = Pattern.compile("^LOOT SHARE!", Pattern.CASE_INSENSITIVE);
 
     /** "gained 2x Cavernfish Shard" — the quantity, when there's more than one. */
-    private static final Pattern QUANTITY = Pattern.compile("(\\d+)x\\s");
+    static final Pattern QUANTITY = Pattern.compile("(\\d+)x [A-Za-z' ]+? Shard");
+
+    /** "received a Rainbow Feather" / "received 2x Rainbow Feather", on a sparkling catch or its loot share. */
+    static final Pattern FEATHERS = Pattern.compile("(?:(\\d+)x |an? )Rainbow Feather");
+
+    /** The Macaw attribute's bonus: one more feather on top of the catch's. */
+    static final String MACAW_BONUS = "MACAW! You found a bonus Rainbow Feather!";
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
@@ -70,7 +76,9 @@ public final class RunHistory {
         /** Macaws the party secured — yours plus loot shares. */
         public int macaws;
         public Map<String, Long> splits = new LinkedHashMap<>();
-        /** Shard value at the time, or -1 if prices weren't loaded yet. */
+        /** Rainbow Feathers received — one per sparkling caught or shared, plus Macaw bonuses. */
+        public int feathers;
+        /** Shard and feather value at the time, or -1 if prices weren't loaded yet. */
         public long coins = -1;
         /** Rebuilt from old logs: the length is approximate and there are no splits. */
         public boolean imported;
@@ -143,7 +151,7 @@ public final class RunHistory {
         run.you = run.catches.size();
         run.partySize = PartyDex.partySize();
         run.splits = new LinkedHashMap<>(splits);
-        run.coins = BazaarPrices.value(run.shards);
+        run.coins = BazaarPrices.value(run.shards, run.feathers);
         run.number = data.nextNumber++;
         data.runs.add(0, run);
         save();
@@ -176,6 +184,10 @@ public final class RunHistory {
         if (text.isEmpty() || HotspotAnnouncer.isRelayed(text)) {
             return;
         }
+        if (text.equals(MACAW_BONUS)) {
+            current.feathers++;
+            return;
+        }
         boolean own = CAPTURE.matcher(text).find();
         if (!own && !LOOT_SHARE.matcher(text).find()) {
             return;
@@ -201,6 +213,10 @@ public final class RunHistory {
         if (text.contains("Shard")) {
             Matcher quantity = QUANTITY.matcher(text);
             run.shards.merge(critter, quantity.find() ? Integer.parseInt(quantity.group(1)) : 1, Integer::sum);
+        }
+        Matcher feathers = FEATHERS.matcher(text);
+        if (feathers.find()) {
+            run.feathers += feathers.group(1) == null ? 1 : Integer.parseInt(feathers.group(1));
         }
     }
 
@@ -237,7 +253,7 @@ public final class RunHistory {
                     if (existing.imported) {
                         int at = data.runs.indexOf(existing);
                         run.number = existing.number;
-                        run.coins = existing.coins >= 0 ? existing.coins : BazaarPrices.value(run.shards);
+                        run.coins = BazaarPrices.value(run.shards, run.feathers);
                         data.runs.set(at, run);
                         refreshed = true;
                     }
@@ -245,7 +261,7 @@ public final class RunHistory {
                 }
             }
             if (!have) {
-                run.coins = BazaarPrices.value(run.shards);
+                run.coins = BazaarPrices.value(run.shards, run.feathers);
                 data.runs.add(run);
                 added++;
             }
@@ -270,7 +286,7 @@ public final class RunHistory {
         boolean changed = false;
         for (Run run : data.runs) {
             if (run.coins < 0 && run.shards != null) {
-                run.coins = BazaarPrices.value(run.shards);
+                run.coins = BazaarPrices.value(run.shards, run.feathers);
                 changed |= run.coins >= 0;
             }
         }

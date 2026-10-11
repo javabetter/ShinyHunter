@@ -35,6 +35,9 @@ public final class BazaarPrices {
     /** Product id -> {instant sell price, sell offer price}. */
     private static final Map<String, double[]> PRICES = new HashMap<>();
 
+    /** What every sparkling catch (and loot share of one) gives, worth millions. */
+    public static final String RAINBOW_FEATHER = "RAINBOW_FEATHER";
+
     private static long fetchedAt;
     private static boolean fetching;
 
@@ -58,7 +61,7 @@ public final class BazaarPrices {
                     JsonObject products = JsonParser.parseString(response.body())
                             .getAsJsonObject().getAsJsonObject("products");
                     for (Map.Entry<String, JsonElement> entry : products.entrySet()) {
-                        if (!entry.getKey().startsWith("SHARD_")) {
+                        if (!entry.getKey().startsWith("SHARD_") && !entry.getKey().equals(RAINBOW_FEATHER)) {
                             continue;
                         }
                         JsonObject quick = entry.getValue().getAsJsonObject().getAsJsonObject("quick_status");
@@ -102,11 +105,18 @@ public final class BazaarPrices {
 
     /** What a pile of shards is worth, or -1 while the prices aren't loaded. */
     public static long value(Map<String, Integer> shards) {
+        return value(shards, 0);
+    }
+
+    /** What a run's shards and Rainbow Feathers are worth, or -1 while the prices aren't loaded. */
+    public static long value(Map<String, Integer> shards, int feathers) {
         if (!ready()) {
             ensureFresh();
             return -1;
         }
-        double total = 0;
+        double[] feather = PRICES.get(RAINBOW_FEATHER);
+        double total = feather == null ? 0
+                : feathers * (ShinyConfig.get().runCoinsInstaSell ? feather[0] : feather[1]);
         for (Map.Entry<String, Integer> entry : shards.entrySet()) {
             total += shardPrice(entry.getKey()) * entry.getValue();
         }
