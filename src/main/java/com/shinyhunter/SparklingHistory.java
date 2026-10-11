@@ -410,6 +410,22 @@ public final class SparklingHistory {
         return added;
     }
 
+    /** Adds catches found in old logs, skipping any already here. Returns how many were added. */
+    public static int importEntries(List<Entry> found) {
+        int added = 0;
+        for (Entry entry : found) {
+            if (!alreadyHave(entry)) {
+                data.entries.add(entry);
+                added++;
+            }
+        }
+        if (added > 0) {
+            data.entries.sort((a, b) -> Long.compare(b.at, a.at));
+            save();
+        }
+        return added;
+    }
+
     private static boolean alreadyHave(Entry candidate) {
         for (Entry entry : data.entries) {
             if (entry.player.equalsIgnoreCase(candidate.player)

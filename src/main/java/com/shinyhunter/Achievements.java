@@ -264,7 +264,7 @@ public final class Achievements {
         }
         RunHistory.Run run = RunHistory.current();
         if (run != null) {
-            checkRunSparklings(run);
+            checkRunSparklings(run, true);
         }
         checkAll(true);
     }
@@ -282,7 +282,7 @@ public final class Achievements {
     }
 
     public static void onMacaw(RunHistory.Run run) {
-        checkMacaws(run);
+        checkMacaws(run, true);
     }
 
     public static void onRunEnd(RunHistory.Run run) {
@@ -386,8 +386,8 @@ public final class Achievements {
     }
 
     private static void checkRun(RunHistory.Run run, boolean announce) {
-        checkRunSparklings(run);
-        checkMacaws(run);
+        checkRunSparklings(run, announce);
+        checkMacaws(run, announce);
         int total = CritterDex.total();
         unlockIf(run.party >= total, FULL_HOUSE, announce);
         unlockIf(run.clocked && run.party >= total && run.length < 180_000L, SPEED_3, announce);
@@ -406,17 +406,17 @@ public final class Achievements {
         unlockIf(sameDay >= 50, DEDICATION, announce);
     }
 
-    private static void checkRunSparklings(RunHistory.Run run) {
-        unlockIf(run.ownSparklings >= 2, DOUBLE_SPARKLE, true);
-        unlockIf(run.ownSparklings >= 3, TRIPLE_SPARKLE, true);
-        unlockIf(run.sparklings.size() >= 2, PARTY_DOUBLE, true);
-        unlockIf(run.sparklings.size() >= 3, PARTY_TRIPLE, true);
+    private static void checkRunSparklings(RunHistory.Run run, boolean announce) {
+        unlockIf(run.ownSparklings >= 2, DOUBLE_SPARKLE, announce);
+        unlockIf(run.ownSparklings >= 3, TRIPLE_SPARKLE, announce);
+        unlockIf(run.sparklings.size() >= 2, PARTY_DOUBLE, announce);
+        unlockIf(run.sparklings.size() >= 3, PARTY_TRIPLE, announce);
     }
 
-    private static void checkMacaws(RunHistory.Run run) {
-        unlockIf(run.macaws >= 3, MACAW_3, true);
-        unlockIf(run.macaws >= 5, MACAW_5, true);
-        unlockIf(run.macaws >= 8, MACAW_8, true);
+    private static void checkMacaws(RunHistory.Run run, boolean announce) {
+        unlockIf(run.macaws >= 3, MACAW_3, announce);
+        unlockIf(run.macaws >= 5, MACAW_5, announce);
+        unlockIf(run.macaws >= 8, MACAW_8, announce);
     }
 
     private static void unlockIf(boolean condition, Def def, boolean announce) {
@@ -430,7 +430,7 @@ public final class Achievements {
         return switch (def.measure()) {
             case EVENT -> isUnlocked(def) ? 1 : 0;
             case RUNS -> RunHistory.runs().size();
-            case HOURS -> totalMillis() / 3_600_000L;
+            case HOURS -> PlaytimeReader.safariMillis() / 3_600_000L;
             case CAUGHT -> {
                 long caught = 0;
                 for (RunHistory.Run run : RunHistory.runs()) {
@@ -455,13 +455,6 @@ public final class Achievements {
         };
     }
 
-    private static long totalMillis() {
-        long total = 0;
-        for (RunHistory.Run run : RunHistory.runs()) {
-            total += run.length;
-        }
-        return total;
-    }
 
     // ------------------------------------------------------------------ unlocking
 
@@ -497,7 +490,13 @@ public final class Achievements {
         client.gui.getChat().addClientSystemMessage(Component.literal("  §7" + def.description()
                 + " §8(" + def.tier().code + def.tier().name() + "§8)"));
         if (config.achievementSound) {
-            client.player.playSound(SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, 0.7f, 1.0f);
+            // Mythic and Divine get the challenge-advancement fanfare ("How Did We Get Here?");
+            // the rest a lighter chime, so the big ones stand out.
+            if (def.tier().ordinal() >= Tier.MYTHIC.ordinal()) {
+                client.player.playSound(SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.0f);
+            } else {
+                client.player.playSound(SoundEvents.PLAYER_LEVELUP, 0.6f, 1.6f);
+            }
         }
         if (def.tier().ordinal() >= Tier.LEGENDARY.ordinal()) {
             client.gui.setTimes(5, 50, 15);
@@ -569,6 +568,43 @@ public final class Achievements {
         }
         checkHistoryCatches(true);
         checkAll(true);
+    }
+
+    /**
+     * After runs and catches are imported from old logs: the streak counters are worked out again
+     * from the whole run history (they can only grow), and every run is checked. Unlocks quietly —
+     * the importer reports the count in one line.
+     *
+     * @return how many achievements this unlocked
+     */
+    public static int afterImport() {
+        if (!data.initialised) {
+            return 0;
+        }
+        int before = data.unlocked.size();
+        List<RunHistory.Run> oldestFirst = new ArrayList<>(RunHistory.runs());
+        java.util.Collections.reverse(oldestFirst);
+        int noMacaw = 0;
+        int noSparkle = 0;
+        boolean lastHadOwn = false;
+        for (RunHistory.Run run : oldestFirst) {
+            noMacaw = run.macaws > 0 ? 0 : noMacaw + 1;
+            data.longestRunsWithoutMacaw = Math.max(data.longestRunsWithoutMacaw, noMacaw);
+            noSparkle = run.ownSparklings > 0 ? 0 : noSparkle + 1;
+            data.longestRunsWithoutSparkling = Math.max(data.longestRunsWithoutSparkling, noSparkle);
+            if (run.ownSparklings > 0 && lastHadOwn) {
+                unlock(BACK_TO_BACK, false);
+            }
+            lastHadOwn = run.ownSparklings > 0;
+            checkRun(run, false);
+        }
+        data.runsSinceMacaw = noMacaw;
+        data.runsSinceOwnSparkling = noSparkle;
+        data.lastRunHadOwnSparkling = lastHadOwn;
+        checkHistoryCatches(false);
+        checkAll(false);
+        save();
+        return data.unlocked.size() - before;
     }
 
     // ------------------------------------------------------------------ reading

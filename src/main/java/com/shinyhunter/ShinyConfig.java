@@ -44,6 +44,12 @@ public final class ShinyConfig {
     /** Value run shards at the bazaar's instant-sell price rather than the sell-offer price. */
     public boolean runCoinsInstaSell = false;
 
+    /** Safari playtime from Skyblock's /playtime menu, in minutes; 0 until it's been opened. */
+    public long safariPlaytimeMinutes = 0;
+
+    /** When {@link #safariPlaytimeMinutes} was read. */
+    public long safariPlaytimeReadAt = 0;
+
     /** Unlock achievements (/shiny achievements). */
     public boolean achievementsEnabled = true;
 

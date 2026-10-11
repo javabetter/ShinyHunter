@@ -72,6 +72,8 @@ public final class RunHistory {
         public Map<String, Long> splits = new LinkedHashMap<>();
         /** Shard value at the time, or -1 if prices weren't loaded yet. */
         public long coins = -1;
+        /** Rebuilt from old logs: the length is approximate and there are no splits. */
+        public boolean imported;
 
         transient Set<String> partySet = new LinkedHashSet<>();
 
@@ -211,6 +213,43 @@ public final class RunHistory {
 
     public static Run current() {
         return current;
+    }
+
+    /**
+     * Adds runs rebuilt from old logs. A run already saved — one starting within two minutes of
+     * it — is skipped, so importing again (or importing a log the live tracker also saw) adds
+     * nothing twice. Every run is then renumbered oldest first.
+     *
+     * @return how many were added
+     */
+    public static int importRuns(List<Run> found) {
+        int added = 0;
+        // Compared only with what was saved before: two found runs a minute apart are both real.
+        List<Run> before = new ArrayList<>(data.runs);
+        for (Run run : found) {
+            boolean have = false;
+            for (Run existing : before) {
+                if (Math.abs(existing.start - run.start) <= 120_000L) {
+                    have = true;
+                    break;
+                }
+            }
+            if (!have) {
+                run.coins = BazaarPrices.value(run.shards);
+                data.runs.add(run);
+                added++;
+            }
+        }
+        if (added > 0) {
+            data.runs.sort((a, b) -> Long.compare(a.start, b.start));
+            for (int i = 0; i < data.runs.size(); i++) {
+                data.runs.get(i).number = i + 1;
+            }
+            data.nextNumber = data.runs.size() + 1;
+            data.runs.sort((a, b) -> Long.compare(b.start, a.start));
+            save();
+        }
+        return added;
     }
 
     /** Fills in coins for runs saved before the bazaar prices had loaded. */

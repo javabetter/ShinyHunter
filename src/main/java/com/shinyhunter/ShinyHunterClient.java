@@ -73,6 +73,7 @@ public class ShinyHunterClient implements ClientModInitializer {
         DowntimeTracker.register();
         SparklingHistory.register();
         RunHistory.register();
+        PlaytimeReader.register();
         Achievements.register();
         BirdFoodWatcher.register();
         TimerWatcher.register();
@@ -188,7 +189,11 @@ public class ShinyHunterClient implements ClientModInitializer {
                 .then(literal("history")
                         .then(argument("page", IntegerArgumentType.integer(1))
                                 .executes(c -> showHistory(c, IntegerArgumentType.getInteger(c, "page"))))
-                        .then(literal("import").executes(ShinyHunterClient::importHistory))
+                        .then(literal("import")
+                                .then(argument("logs folder", StringArgumentType.greedyString())
+                                        .executes(c -> importHistory(java.nio.file.Path.of(
+                                                StringArgumentType.getString(c, "logs folder").replace("\"", "")))))
+                                .executes(c -> importHistory(LogImporter.defaultLogs())))
                         .executes(c -> openHistory(com.shinyhunter.gui.HistoryScreen.Tab.RUNS)))
                 .then(literal("achievements")
                         .executes(c -> openHistory(com.shinyhunter.gui.HistoryScreen.Tab.ACHIEVEMENTS)))
@@ -290,14 +295,14 @@ public class ShinyHunterClient implements ClientModInitializer {
     }
 
     /** {@code /shiny history import}: merges Downloads\sparkling-entries.json from shinylogs.vercel.app. */
-    private static int importHistory(CommandContext<FabricClientCommandSource> context) {
-        java.nio.file.Path file = SparklingHistory.defaultImportFile();
-        if (!java.nio.file.Files.exists(file)) {
-            return feedback(context, "§cNo sparkling-entries.json in Downloads. §7Make one at §fshinylogs.vercel.app§7 from old logs.");
-        }
-        int added = SparklingHistory.importFrom(file);
-        return feedback(context, added < 0 ? "§cCouldn't read " + file.getFileName() + "."
-                : "Imported §e" + added + "§r sparkling" + (added == 1 ? "" : "s") + " §7(duplicates skipped).");
+    /**
+     * {@code /shiny history import [logs folder]}: rebuilds past runs and sparklings from the game's
+     * logs (another instance's logs folder can be given), plus Downloads\sparkling-entries.json
+     * from shinylogs.vercel.app if it's there.
+     */
+    private static int importHistory(java.nio.file.Path folder) {
+        LogImporter.runImport(folder);
+        return Command.SINGLE_SUCCESS;
     }
 
     private static int showHistory(CommandContext<FabricClientCommandSource> context, int page) {
@@ -327,7 +332,7 @@ public class ShinyHunterClient implements ClientModInitializer {
                 {"/shiny who", "who the Safari Manager guard is counting"},
                 {"/shiny history", "runs, bests, sparklings, achievements, stats"},
                 {"/shiny history <page>", "every sparkling caught, in chat"},
-                {"/shiny history import", "add old catches from shinylogs.vercel.app"},
+                {"/shiny history import [folder]", "rebuild past runs and sparklings from your logs"},
                 {"/shiny achievements", "your achievements"},
                 {"/shiny nestsurvey [on|off|clear]", "record fixture bee nests to a file"},
                 {"/shiny hives", "which honeyhives are full, and what's known about each"},

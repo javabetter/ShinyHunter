@@ -4,6 +4,7 @@ import com.shinyhunter.Achievements;
 import com.shinyhunter.BazaarPrices;
 import com.shinyhunter.CritterDex;
 import com.shinyhunter.Edition;
+import com.shinyhunter.PlaytimeReader;
 import com.shinyhunter.RunHistory;
 import com.shinyhunter.SafariTimer;
 import com.shinyhunter.ShinyConfig;
@@ -288,7 +289,8 @@ public final class HistoryScreen extends Screen {
                 parts.add("§f" + split.getKey() + " §b" + SafariTimer.format(split.getValue()));
             }
             String extra = "§7Macaws §f" + detail.macaws + "  §7Loot shares §f" + detail.lootShares
-                    + "  §7Tickets §f" + detail.tickets + "  §7Party §f" + detail.partySize;
+                    + "  §7Tickets §f" + detail.tickets
+                    + (detail.imported ? "  §8(from old logs — approximate, no splits)" : "  §7Party §f" + detail.partySize);
             centred(g, parts.isEmpty() ? extra : String.join(" §8· ", parts), px + pw / 2, detailY + 11, TEXT);
             if (!parts.isEmpty()) {
                 // Splits take the line; the rest goes on hover over the detail.
@@ -545,7 +547,16 @@ public final class HistoryScreen extends Screen {
             // The right-hand column (date or progress) is reserved; text on the left is cut to fit
             // beside it, and the whole thing is on hover.
             int right = px + pw - 18;
-            int textW = right - 100 - (px + 14);
+            String side = null;
+            long progress = 0;
+            if (has) {
+                side = "§a✔ §7" + DAY.format(Instant.ofEpochMilli(Achievements.unlockedAt(def)).atZone(ZoneId.systemDefault()));
+            } else if (def.hasProgress()) {
+                progress = Math.min(Achievements.progress(def), def.goal());
+                side = "§7" + compact(progress) + "/" + compact(def.goal());
+            }
+            int sideW = side == null ? 0 : Math.max(font.width(side), def.hasProgress() && !has ? 70 : 0);
+            int textW = right - sideW - 10 - (px + 14);
             String namePrefix = hidden ? "§8§l" : (has ? def.tier().code + "§l" : "§7§l");
             String name = cut(namePrefix, hidden ? "???" : def.name(), textW);
             g.text(font, name, px + 14, y + 2, TEXT);
@@ -561,13 +572,10 @@ public final class HistoryScreen extends Screen {
             }
 
             if (has) {
-                String when = "§a✔ §7" + DAY.format(Instant.ofEpochMilli(Achievements.unlockedAt(def)).atZone(ZoneId.systemDefault()));
-                g.text(font, when, right - font.width(when), y + 7, TEXT);
-            } else if (def.hasProgress()) {
-                long progress = Math.min(Achievements.progress(def), def.goal());
-                String text = String.format(Locale.ROOT, "%,d/%,d", progress, def.goal());
-                g.text(font, "§7" + text, right - font.width(text), y + 2, MUTED);
-                bar(g, right - 90, y + 13, 90, 4, (double) progress / def.goal(), def.tier().argb);
+                g.text(font, side, right - font.width(side), y + 7, TEXT);
+            } else if (side != null) {
+                g.text(font, side, right - font.width(side), y + 2, MUTED);
+                bar(g, right - sideW, y + 13, sideW, 4, (double) progress / def.goal(), def.tier().argb);
             }
         }
         scrollbar(g, offset);
@@ -629,6 +637,8 @@ public final class HistoryScreen extends Screen {
         String[][] rows = {
                 {"Runs", String.format(Locale.ROOT, "%,d", runs.size())},
                 {"Time on runs", hours(played)},
+                {"Safari playtime", config.safariPlaytimeMinutes > 0 ? hours(PlaytimeReader.safariMillis())
+                        : "§7open /playtime → Safari"},
                 {"Average run", runs.isEmpty() ? "—" : clock(played / runs.size())},
                 {"Full clears (37/37)", fullClears + (runs.isEmpty() ? "" : " §7(" + fullClears * 100 / runs.size() + "%)")},
                 {"Critters caught", String.format(Locale.ROOT, "%,d", caught)},
@@ -793,6 +803,25 @@ public final class HistoryScreen extends Screen {
     }
 
     // ------------------------------------------------------------------ formatting
+
+    /** {@code 950}, {@code 12.5k}, {@code 100M}, {@code 1B}. */
+    private static String compact(long n) {
+        if (n >= 1_000_000_000L) {
+            return trim(n / 1e9) + "B";
+        }
+        if (n >= 1_000_000L) {
+            return trim(n / 1e6) + "M";
+        }
+        if (n >= 10_000L) {
+            return trim(n / 1e3) + "k";
+        }
+        return String.format(Locale.ROOT, "%,d", n);
+    }
+
+    private static String trim(double value) {
+        String s = String.format(Locale.ROOT, "%.1f", value);
+        return s.endsWith(".0") ? s.substring(0, s.length() - 2) : s;
+    }
 
     /** {@code 2:38}, or {@code 1:02:38} past an hour. */
     private static String clock(long millis) {
