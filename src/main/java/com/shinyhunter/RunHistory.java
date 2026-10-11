@@ -308,6 +308,7 @@ public final class RunHistory {
         }
         try {
             Data read = GSON.fromJson(Files.readString(file, StandardCharsets.UTF_8), Data.class);
+            boolean migrated = false;
             if (read != null && read.runs != null) {
                 read.runs.removeIf(r -> r == null);
                 for (Run run : read.runs) {
@@ -323,9 +324,22 @@ public final class RunHistory {
                     if (run.splits == null) {
                         run.splits = new LinkedHashMap<>();
                     }
+                    // Runs saved before feathers were counted: every sparkling in a run gives you a
+                    // Rainbow Feather (your catch, or the loot share of a teammate's), so that many at
+                    // least — a re-import from the logs adds any Macaw bonus. Coins are worked out
+                    // again once the prices are in.
+                    if (run.feathers == 0 && !run.sparklings.isEmpty()) {
+                        run.feathers = run.sparklings.size();
+                        run.coins = -1;
+                        migrated = true;
+                    }
                 }
                 read.runs.sort((a, b) -> Long.compare(b.start, a.start));
                 data = read;
+                if (migrated) {
+                    ShinyHunterClient.LOGGER.info("Run history: counted Rainbow Feathers for older sparkling runs");
+                    save();
+                }
             }
         } catch (IOException | RuntimeException e) {
             ShinyHunterClient.LOGGER.warn("Couldn't read run history — starting empty", e);
