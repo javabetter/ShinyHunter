@@ -31,8 +31,8 @@ import java.util.zip.GZIPInputStream;
  * <p>A run starts at the Safari Manager taking (or having seen) your ticket, and ends when you warp
  * out — Hypixel's "Sending to server mini143BE..." line — or when the log ends. In between, the same
  * lines the live tracker reads: your captures, loot shares (and their shards), sparklings, Macaws,
- * and HOTSPOT!/HEAD START! for when the hunt began. A run's length is from the hunt beginning to its
- * last catch, so standing around before warping out doesn't count.
+ * and HOTSPOT!/HEAD START! for when the hunt began. A run's length is from the hunt beginning to the
+ * warp out. Splits come from biomes being called done in party chat ("Forest clear!", "icy done").
  *
  * <p>Only the server's own lines count: a channel prefix (party, guild, DMs) means somebody quoting
  * one. Read on a background thread; the results are merged on the client thread.
@@ -58,6 +58,19 @@ public final class LogImporter {
     private static final Pattern SENDING = Pattern.compile("^Sending to server \\S+\\.\\.\\.$");
     private static final Pattern SPARKLING = Pattern.compile("^SPARKLING! ([A-Za-z0-9_]{1,16}) caught a SPARKLING (.+?)!$");
     private static final Pattern QUANTITY = Pattern.compile("(\\d+)x\\s");
+
+    /** A party chat line: the message after the sender. */
+    private static final Pattern PARTY_LINE = Pattern.compile("^Party > [^:]*?: (.+)$");
+
+    /**
+     * A biome called done in party chat — the whole message, so chatter like "need help icy when
+     * someone's done" doesn't count: "Forest clear!" (this mod), "Icy Done!", "ice done".
+     */
+    private static final Pattern BIOME_DONE = Pattern.compile(
+            "^(cavern|forest|haunted|icy|ice) (?:clear|done)!?$", Pattern.CASE_INSENSITIVE);
+
+    /** This mod's Forest-is-done-but-Macaw call: "Forest 8/9, missing Macaw". */
+    private static final Pattern FOREST_NO_MACAW = Pattern.compile("^Forest \\d+/\\d+, missing Macaw$");
 
     /** What one import found. */
     public record Result(List<RunHistory.Run> runs, List<SparklingHistory.Entry> sparklings, int files) {
@@ -139,6 +152,7 @@ public final class LogImporter {
         Set<String> party;
         long clockStart;
         long lastSecured;
+        java.util.Map<String, Long> splits;
 
         Parser(String self) {
             this.self = self;
@@ -177,7 +191,17 @@ public final class LogImporter {
         }
 
         void handle(String text, long at) {
-            if (text.isEmpty() || HotspotAnnouncer.isRelayed(text)) {
+            if (text.isEmpty()) {
+                return;
+            }
+            if (run != null && clockStart > 0) {
+                Matcher party = PARTY_LINE.matcher(text);
+                if (party.matches()) {
+                    split(party.group(1).trim(), at);
+                    return;
+                }
+            }
+            if (HotspotAnnouncer.isRelayed(text)) {
                 return;
             }
             if (text.startsWith(MANAGER)) {
@@ -193,6 +217,7 @@ public final class LogImporter {
                         party = new LinkedHashSet<>();
                         clockStart = 0;
                         lastSecured = 0;
+                        splits = new java.util.LinkedHashMap<>();
                     }
                     if (ticket) {
                         run.tickets++;
@@ -257,6 +282,26 @@ public final class LogImporter {
             }
         }
 
+        /** A biome called done: its split, the first call per biome counting. */
+        void split(String said, long at) {
+            String key = null;
+            Matcher done = BIOME_DONE.matcher(said);
+            if (done.matches()) {
+                String word = done.group(1).toLowerCase(java.util.Locale.ROOT);
+                key = word.equals("ice") ? "Icy" : Character.toUpperCase(word.charAt(0)) + word.substring(1);
+            } else if (FOREST_NO_MACAW.matcher(said).matches()) {
+                key = SplitTracker.FOREST_NO_MACAW;
+            }
+            if (key == null || splits.containsKey(key)) {
+                return;
+            }
+            splits.put(key, at - clockStart);
+            // A whole Forest is also a Forest without Macaw, as in a live run.
+            if (key.equals("Forest")) {
+                splits.putIfAbsent(SplitTracker.FOREST_NO_MACAW, at - clockStart);
+            }
+        }
+
         /** Ends the run in progress, keeping it only if anything was caught. */
         void close(long at) {
             RunHistory.Run done = run;
@@ -267,10 +312,17 @@ public final class LogImporter {
             done.party = party.size();
             done.you = done.catches.size();
             done.clocked = clockStart > 0;
+            // To the warp out (or the log's last line): standing around at the end is part of the run.
             long from = clockStart > 0 ? clockStart : done.start;
-            long to = lastSecured > 0 ? lastSecured : at;
+            long to = at > 0 ? at : lastSecured;
             done.length = Math.max(0, to - from);
             done.imported = true;
+            for (String key : SplitTracker.keys()) {
+                Long time = splits.get(key);
+                if (time != null) {
+                    done.splits.put(key, time);
+                }
+            }
             runs.add(done);
         }
     }
@@ -300,6 +352,13 @@ public final class LogImporter {
                 return;
             }
             int runs = RunHistory.importRuns(result.runs());
+            boolean bests = false;
+            for (RunHistory.Run run : result.runs()) {
+                bests |= SplitTracker.offerPastRun(run.splits, run.catches);
+            }
+            if (bests) {
+                ShinyConfig.get().save();
+            }
             int catches = SparklingHistory.importEntries(result.sparklings());
             int fromSite = 0;
             Path site = SparklingHistory.defaultImportFile();

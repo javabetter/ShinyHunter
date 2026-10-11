@@ -245,9 +245,14 @@ public final class SplitTracker {
      * under a best that isn't yours.
      */
     public static Set<String> ownBiomes() {
+        return ownBiomesOf(OWN_CATCHES);
+    }
+
+    /** {@link #ownBiomes()} for any per-biome tally of your own catches. */
+    public static Set<String> ownBiomesOf(Map<String, Integer> ownCatches) {
         int threshold = ShinyConfig.get().ownBiomeMinCatches;
         Set<String> qualifying = new LinkedHashSet<>();
-        for (Map.Entry<String, Integer> entry : OWN_CATCHES.entrySet()) {
+        for (Map.Entry<String, Integer> entry : ownCatches.entrySet()) {
             if (entry.getValue() >= threshold) {
                 qualifying.add(entry.getKey());
             }
@@ -259,7 +264,7 @@ public final class SplitTracker {
         String best = null;
         int bestCount = 0;
         boolean tied = false;
-        for (Map.Entry<String, Integer> entry : OWN_CATCHES.entrySet()) {
+        for (Map.Entry<String, Integer> entry : ownCatches.entrySet()) {
             int count = entry.getValue();
             if (count > bestCount) {
                 best = entry.getKey();
@@ -270,6 +275,42 @@ public final class SplitTracker {
             }
         }
         return best == null || tied ? Set.of() : Set.of(best);
+    }
+
+    /**
+     * Offers a past run's splits (rebuilt from logs) to the saved bests, by the same rules as a live
+     * run: every split to the party best, and to your personal best where you worked that biome.
+     *
+     * @return true if any best improved
+     */
+    public static boolean offerPastRun(Map<String, Long> splits, Map<String, Integer> catchesByCritter) {
+        ShinyConfig config = ShinyConfig.get();
+        Map<String, Integer> byBiome = new LinkedHashMap<>();
+        catchesByCritter.forEach((critter, n) -> {
+            String biome = CritterDex.biomeOf(critter);
+            if (biome != null) {
+                byBiome.merge(biome, n, Integer::sum);
+            }
+        });
+        Set<String> mine = ownBiomesOf(byBiome);
+        boolean changed = false;
+        for (Map.Entry<String, Long> split : splits.entrySet()) {
+            String key = split.getKey();
+            long time = split.getValue();
+            Long partyBest = config.partyBests.get(key);
+            if (partyBest == null || time < partyBest) {
+                config.partyBests.put(key, time);
+                changed = true;
+            }
+            if (isOwn(key, mine)) {
+                Long personalBest = config.personalBests.get(key);
+                if (personalBest == null || time < personalBest) {
+                    config.personalBests.put(key, time);
+                    changed = true;
+                }
+            }
+        }
+        return changed;
     }
 
     // ------------------------------------------------------------------ state

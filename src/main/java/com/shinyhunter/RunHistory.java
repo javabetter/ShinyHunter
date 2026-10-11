@@ -226,11 +226,21 @@ public final class RunHistory {
         int added = 0;
         // Compared only with what was saved before: two found runs a minute apart are both real.
         List<Run> before = new ArrayList<>(data.runs);
+        boolean refreshed = false;
         for (Run run : found) {
             boolean have = false;
             for (Run existing : before) {
                 if (Math.abs(existing.start - run.start) <= 120_000L) {
                     have = true;
+                    // An earlier import is replaced by this one, which may read the logs better;
+                    // a run recorded live is always kept as it is.
+                    if (existing.imported) {
+                        int at = data.runs.indexOf(existing);
+                        run.number = existing.number;
+                        run.coins = existing.coins >= 0 ? existing.coins : BazaarPrices.value(run.shards);
+                        data.runs.set(at, run);
+                        refreshed = true;
+                    }
                     break;
                 }
             }
@@ -239,6 +249,9 @@ public final class RunHistory {
                 data.runs.add(run);
                 added++;
             }
+        }
+        if (added == 0 && refreshed) {
+            save();
         }
         if (added > 0) {
             data.runs.sort((a, b) -> Long.compare(a.start, b.start));

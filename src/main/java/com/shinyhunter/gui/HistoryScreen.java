@@ -323,8 +323,14 @@ public final class HistoryScreen extends Screen {
         g.text(font, "§7Splits are cumulative from the start of the run.", px + 8, py + 18, MUTED);
 
         int left = px + 16;
-        int colA = px + Math.round(pw * 0.30f);
-        int colB = px + Math.round(pw * 0.43f);
+        // Columns placed after the longest split name, so "Forest w/o Macaw" never runs into them.
+        int labelW = 0;
+        for (String key : SplitTracker.keys()) {
+            labelW = Math.max(labelW, font.width(key));
+        }
+        int timeW = Math.max(font.width("9m42.00s"), font.width("Personal"));
+        int colA = left + labelW + 8 + timeW / 2;
+        int colB = colA + timeW + 6;
         int y = py + 36;
         g.text(font, "Split", left, y, 0xFFDDDDDD);
         centred(g, "Personal", colA, y, 0xFFDDDDDD);
@@ -340,7 +346,8 @@ public final class HistoryScreen extends Screen {
         }
 
         // Records from the saved runs.
-        int rx = px + Math.round(pw * 0.55f);
+        // The records start just past the split table, whatever its width.
+        int rx = colB + timeW / 2 + 14;
         int ry = py + 36;
         g.text(font, "Run Records §8(best in one run)", rx, ry, 0xFFDDDDDD);
         ry += 13;
@@ -354,7 +361,7 @@ public final class HistoryScreen extends Screen {
                 Comparator.comparingInt((RunHistory.Run r) -> r.sparklings.size()).reversed());
         RunHistory.Run mostMacaws = best(runs, r -> r.macaws > 0, Comparator.comparingInt((RunHistory.Run r) -> r.macaws).reversed());
 
-        ry = record(g, rx, ry, "Fastest clear", fastest == null ? null : SafariTimer.format(fastest.length), fastest);
+        ry = record(g, rx, ry, "Fastest run", fastest == null ? null : SafariTimer.format(fastest.length), fastest);
         ry = record(g, rx, ry, "Most caught", mostCaught == null ? null : String.valueOf(mostCaught.caught), mostCaught);
         ry = record(g, rx, ry, "Most coins", mostCoins == null ? null : BazaarPrices.format(mostCoins.coins), mostCoins);
         ry = record(g, rx, ry, "Best own dex", mostYou == null ? null : mostYou.you + "/" + total, mostYou);
