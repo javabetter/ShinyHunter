@@ -361,7 +361,7 @@ public final class HistoryScreen extends Screen {
         ry += 6;
         g.text(font, "Luck", rx, ry, 0xFFDDDDDD);
         ry += 13;
-        ry = record(g, rx, ry, "Dry streak", Achievements.longestDrySparkling() + " tickets", null);
+        ry = record(g, rx, ry, "Dry streak", Achievements.longestDrySparkling() + " runs", null);
         record(g, rx, ry, "Macaw drought", Achievements.progress(achievement("no_macaw_100")) + " runs", null);
     }
 

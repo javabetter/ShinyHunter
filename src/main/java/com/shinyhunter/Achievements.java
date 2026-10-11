@@ -112,13 +112,15 @@ public final class Achievements {
     static final Def SET_ICY = event("set_icy", "Icy Glitter", "Have every Icy sparkling.", Tier.EPIC);
 
     // ---- unlucky
-    static final Def DRY_250 = add("dry_250", "Unlucky", "Use 250 tickets without catching a sparkling.", Tier.UNCOMMON, Measure.DRY_SPARKLING, 250);
-    static final Def DRY_500 = add("dry_500", "Very Unlucky", "Use 500 tickets without catching a sparkling.", Tier.RARE, Measure.DRY_SPARKLING, 500);
-    static final Def DRY_1000 = add("dry_1000", "Cursed", "Use 1,000 tickets without catching a sparkling.", Tier.EPIC, Measure.DRY_SPARKLING, 1000);
-    static final Def DRY_2000 = add("dry_2000", "Forsaken", "Use 2,000 tickets without catching a sparkling.", Tier.MYTHIC, Measure.DRY_SPARKLING, 2000);
-    static final Def NO_UNIQUE_500 = add("no_unique_500", "Same Old Sparkle", "Use 500 tickets without a new unique sparkling.", Tier.RARE, Measure.DRY_UNIQUE, 500);
-    static final Def NO_UNIQUE_1000 = add("no_unique_1000", "Déjà Vu", "Use 1,000 tickets without a new unique sparkling.", Tier.EPIC, Measure.DRY_UNIQUE, 1000);
-    static final Def NO_UNIQUE_2500 = add("no_unique_2500", "Groundhog Day", "Use 2,500 tickets without a new unique sparkling.", Tier.LEGENDARY, Measure.DRY_UNIQUE, 2500);
+    static final Def DRY_10 = add("dry_runs_10", "Unlucky", "10 runs in a row without catching a sparkling.", Tier.UNCOMMON, Measure.DRY_SPARKLING, 10);
+    static final Def DRY_20 = add("dry_runs_20", "Very Unlucky", "20 runs in a row without catching a sparkling.", Tier.RARE, Measure.DRY_SPARKLING, 20);
+    static final Def DRY_30 = add("dry_runs_30", "Cursed", "30 runs in a row without catching a sparkling.", Tier.EPIC, Measure.DRY_SPARKLING, 30);
+    static final Def DRY_40 = add("dry_runs_40", "Forsaken", "40 runs in a row without catching a sparkling.", Tier.LEGENDARY, Measure.DRY_SPARKLING, 40);
+    static final Def DRY_50 = add("dry_runs_50", "Doomed", "50 runs in a row without catching a sparkling.", Tier.MYTHIC, Measure.DRY_SPARKLING, 50);
+    static final Def NO_UNIQUE_25 = add("no_unique_runs_25", "Same Old Sparkle", "25 runs in a row without a new unique sparkling.", Tier.RARE, Measure.DRY_UNIQUE, 25);
+    static final Def NO_UNIQUE_50 = add("no_unique_runs_50", "Déjà Vu", "50 runs in a row without a new unique sparkling.", Tier.EPIC, Measure.DRY_UNIQUE, 50);
+    static final Def NO_UNIQUE_75 = add("no_unique_runs_75", "Groundhog Day", "75 runs in a row without a new unique sparkling.", Tier.LEGENDARY, Measure.DRY_UNIQUE, 75);
+    static final Def NO_UNIQUE_100 = add("no_unique_runs_100", "Broken Record", "100 runs in a row without a new unique sparkling.", Tier.MYTHIC, Measure.DRY_UNIQUE, 100);
 
     // ---- Macaw
     static final Def MACAW_3 = event("macaw_3", "Bird Watcher", "Your party secures 3 Macaws in one run.", Tier.RARE);
@@ -188,6 +190,15 @@ public final class Achievements {
         int contestsCompleted;
         /** Whether the previous run had a sparkling of yours, for Back to Back. */
         boolean lastRunHadOwnSparkling;
+        /** Runs in a row without your sparkling / your new unique, and the longest of each. */
+        int runsSinceOwnSparkling;
+        int runsSinceOwnUnique;
+        int longestRunsWithoutSparkling;
+        int longestRunsWithoutUnique;
+        /** A new unique was confirmed since the last run ended (the API can answer late). */
+        boolean uniqueSinceLastRun;
+        /** Whether the run counters have been seeded from the ticket counters (one ticket per run). */
+        boolean runCountersSeeded;
     }
 
     private static Data data = new Data();
@@ -215,6 +226,10 @@ public final class Achievements {
             initialise(client);
             return;
         }
+        if (!data.runCountersSeeded) {
+            seedRunCounters();
+            checkAll(true);
+        }
         // The party dex lookups can arrive any time; that's where your full sparkling dex comes from.
         if (++tickCounter >= 200) {
             tickCounter = 0;
@@ -237,6 +252,7 @@ public final class Achievements {
                 unlock(INSTANT, true);
             }
             data.ticketsSinceOwnSparkling = 0;
+            data.runsSinceOwnSparkling = 0;
             String critter = entry.critter;
             if (critter.equals("Macaw") || critter.equals("Wumpa") || critter.equals("Doomspiral")) {
                 unlock(LEGENDARY_SPARKLE, true);
@@ -258,6 +274,8 @@ public final class Achievements {
         Minecraft client = Minecraft.getInstance();
         if (client.player != null && entry.player.equalsIgnoreCase(client.player.getName().getString())) {
             data.ticketsSinceOwnUnique = 0;
+            data.runsSinceOwnUnique = 0;
+            data.uniqueSinceLastRun = true;
             save();
         }
         checkAll(true);
@@ -275,6 +293,15 @@ public final class Achievements {
             data.longestRunsWithoutMacaw = Math.max(data.longestRunsWithoutMacaw, data.runsSinceMacaw);
         }
         boolean ownSparkling = run.ownSparklings > 0;
+        if (!ownSparkling) {
+            data.runsSinceOwnSparkling++;
+            data.longestRunsWithoutSparkling = Math.max(data.longestRunsWithoutSparkling, data.runsSinceOwnSparkling);
+        }
+        if (!data.uniqueSinceLastRun) {
+            data.runsSinceOwnUnique++;
+            data.longestRunsWithoutUnique = Math.max(data.longestRunsWithoutUnique, data.runsSinceOwnUnique);
+        }
+        data.uniqueSinceLastRun = false;
         if (ownSparkling && data.lastRunHadOwnSparkling) {
             unlock(BACK_TO_BACK, true);
         }
@@ -420,8 +447,8 @@ public final class Achievements {
             }
             case OWN_SPARKLINGS -> ownEntries().size();
             case UNIQUES -> ownDex().size();
-            case DRY_SPARKLING -> Math.max(data.longestDrySparkling, data.ticketsSinceOwnSparkling);
-            case DRY_UNIQUE -> Math.max(data.longestDryUnique, data.ticketsSinceOwnUnique);
+            case DRY_SPARKLING -> Math.max(data.longestRunsWithoutSparkling, data.runsSinceOwnSparkling);
+            case DRY_UNIQUE -> Math.max(data.longestRunsWithoutUnique, data.runsSinceOwnUnique);
             case RUNS_SINCE_MACAW -> Math.max(data.longestRunsWithoutMacaw, data.runsSinceMacaw);
             case CONTESTS -> data.contestsCompleted;
             case EMBLEMS -> data.emblems.size();
@@ -507,6 +534,7 @@ public final class Achievements {
         data.ticketsSinceOwnUnique = sinceUnique;
         data.longestDrySparkling = Math.max(longest, data.ticketsSinceOwnSparkling);
         data.longestDryUnique = sinceUnique;
+        seedRunCounters();
 
         int before = data.unlocked.size();
         checkAll(false);
@@ -557,8 +585,25 @@ public final class Achievements {
         return data.ticketsSinceOwnSparkling;
     }
 
+    /** Longest run of Safari runs without your sparkling, the current one included. */
     public static long longestDrySparkling() {
-        return Math.max(data.longestDrySparkling, data.ticketsSinceOwnSparkling);
+        return Math.max(data.longestRunsWithoutSparkling, data.runsSinceOwnSparkling);
+    }
+
+    /**
+     * Run counts didn't exist before; each Safari run costs one ticket, so the ticket counters are
+     * the run counts so far. Done once, for a file from before the change or a first start.
+     */
+    private static void seedRunCounters() {
+        if (data.runCountersSeeded) {
+            return;
+        }
+        data.runCountersSeeded = true;
+        data.runsSinceOwnSparkling = (int) data.ticketsSinceOwnSparkling;
+        data.runsSinceOwnUnique = (int) data.ticketsSinceOwnUnique;
+        data.longestRunsWithoutSparkling = (int) Math.max(data.longestDrySparkling, data.ticketsSinceOwnSparkling);
+        data.longestRunsWithoutUnique = (int) Math.max(data.longestDryUnique, data.ticketsSinceOwnUnique);
+        save();
     }
 
     public static int runsSinceMacaw() {
