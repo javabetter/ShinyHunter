@@ -44,6 +44,7 @@ public class ShinyHunterClient implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(BeeNestHighlighter::onClientTick);
         ClientTickEvents.END_CLIENT_TICK.register(NestSurvey::onClientTick);
         ClientTickEvents.END_CLIENT_TICK.register(HoneyHives::onClientTick);
+        ClientTickEvents.END_CLIENT_TICK.register(OwnStats::onClientTick);
         ClientTickEvents.END_CLIENT_TICK.register(com.shinyhunter.gui.moul.MoulConfigBridge::onClientTick);
         ClientTickEvents.END_CLIENT_TICK.register(BlockHighlighter::onClientTick);
         ClientTickEvents.END_CLIENT_TICK.register(EntityHighlighter::onClientTick);

@@ -47,7 +47,7 @@ public final class Achievements {
     public enum Tier {
         COMMON("§f", 0xFFFFFFFF), UNCOMMON("§a", 0xFF55FF55), RARE("§9", 0xFF5555FF),
         EPIC("§5", 0xFFAA00AA), LEGENDARY("§6", 0xFFFFAA00), MYTHIC("§d", 0xFFFF55FF),
-        DIVINE("§b", 0xFF55FFFF);
+        DIVINE("§b", 0xFF55FFFF), SPECIAL("§c", 0xFFFF5555);
 
         public final String code;
         public final int argb;
@@ -61,7 +61,7 @@ public final class Achievements {
     /** What an achievement measures; goal-type ones show a progress bar. */
     public enum Measure {
         EVENT, RUNS, HOURS, CAUGHT, COINS, OWN_SPARKLINGS, UNIQUES, DRY_SPARKLING, DRY_UNIQUE,
-        RUNS_SINCE_MACAW, CONTESTS, EMBLEMS
+        RUNS_SINCE_MACAW, CONTESTS
     }
 
     /** One achievement. */
@@ -92,8 +92,9 @@ public final class Achievements {
 
     // ---- sparkling luck
     static final Def FIRST_SPARKLE = event("first_sparkle", "First Sparkle", "Catch your first sparkling critter.", Tier.COMMON);
-    static final Def PARTY_DOUBLE = event("party_double", "Shared Shine", "Your party catches 2 sparklings in one run.", Tier.RARE);
-    static final Def PARTY_TRIPLE = event("party_triple", "Sparkle Storm", "Your party catches 3 sparklings in one run.", Tier.LEGENDARY);
+    static final Def PARTY_DOUBLE = event("party_double", "Shared Shine", "Your party catches 2 sparklings in one run.", Tier.LEGENDARY);
+    static final Def PARTY_TRIPLE = event("party_triple", "Sparkle Storm", "Your party catches 3 sparklings in one run.", Tier.DIVINE);
+    static final Def OWN_TRIPLE = event("own_triple", "Hat Trick", "Catch 3 sparklings yourself in one run.", Tier.SPECIAL);
     static final Def SPARKLE_10 = add("sparkle_10", "Glimmer", "Catch 10 sparklings.", Tier.UNCOMMON, Measure.OWN_SPARKLINGS, 10);
     static final Def SPARKLE_25 = add("sparkle_25", "Gleam", "Catch 25 sparklings.", Tier.RARE, Measure.OWN_SPARKLINGS, 25);
     static final Def SPARKLE_50 = add("sparkle_50", "Radiance", "Catch 50 sparklings.", Tier.EPIC, Measure.OWN_SPARKLINGS, 50);
@@ -119,6 +120,7 @@ public final class Achievements {
     static final Def NO_UNIQUE_10 = add("no_unique_runs_10", "Déjà Vu", "10 runs in a row without a new unique sparkling.", Tier.EPIC, Measure.DRY_UNIQUE, 10);
     static final Def NO_UNIQUE_25 = add("no_unique_runs_25", "Groundhog Day", "25 runs in a row without a new unique sparkling.", Tier.LEGENDARY, Measure.DRY_UNIQUE, 25);
     static final Def NO_UNIQUE_50 = add("no_unique_runs_50", "Broken Record", "50 runs in a row without a new unique sparkling.", Tier.MYTHIC, Measure.DRY_UNIQUE, 50);
+    static final Def NO_UNIQUE_250 = add("no_unique_runs_250", "Eternal Rerun", "250 runs in a row without a new unique sparkling.", Tier.DIVINE, Measure.DRY_UNIQUE, 250);
 
     // ---- Macaw
     static final Def MACAW_3 = event("macaw_3", "Bird Watcher", "Your party secures 3 Macaws in one run.", Tier.RARE);
@@ -130,8 +132,6 @@ public final class Achievements {
 
     // ---- drops and emblems
     static final Def EMERALD_DYE = event("emerald_dye", "Emerald Dye", "Find an Emerald Dye.", Tier.DIVINE);
-    static final Def FIRST_EMBLEM = add("emblem_1", "Emblematic", "Unlock an emblem.", Tier.RARE, Measure.EMBLEMS, 1);
-    static final Def EMBLEMS_5 = add("emblem_5", "Emblem Collector", "Unlock 5 emblems.", Tier.LEGENDARY, Measure.EMBLEMS, 5);
 
     // ---- runs
     static final Def RUN_10 = add("run_10", "Safari Rookie", "Finish 10 Safari runs.", Tier.COMMON, Measure.RUNS, 10);
@@ -332,23 +332,6 @@ public final class Achievements {
             ShinyHunterClient.LOGGER.info("Emerald Dye drop seen: {}", text);
             unlock(EMERALD_DYE, true);
         }
-        if (text.toLowerCase(Locale.ROOT).contains("emblem")) {
-            for (Pattern pattern : EMBLEM_LINES) {
-                Matcher m = pattern.matcher(text);
-                if (m.find()) {
-                    String name = m.group(1).trim();
-                    if (!name.isEmpty() && name.length() <= 32 && !data.emblems.containsKey(name)) {
-                        data.emblems.put(name, System.currentTimeMillis());
-                        save();
-                        ShinyHunterClient.LOGGER.info("Emblem unlocked: {} (from \"{}\")", name, text);
-                        announce(new Def("emblem:" + name, name + " Emblem", "Unlock the " + name + " emblem.",
-                                Tier.EPIC, false, Measure.EVENT, 1));
-                        checkAll(true);
-                    }
-                    break;
-                }
-            }
-        }
     }
 
     /** Your drop, not a broadcast of somebody else's ("WOW! Name found Emerald Dye"). */
@@ -412,6 +395,7 @@ public final class Achievements {
     private static void checkRunSparklings(RunHistory.Run run, boolean announce) {
         unlockIf(run.sparklings.size() >= 2, PARTY_DOUBLE, announce);
         unlockIf(run.sparklings.size() >= 3, PARTY_TRIPLE, announce);
+        unlockIf(run.ownSparklings >= 3, OWN_TRIPLE, announce);
     }
 
     private static void checkMacaws(RunHistory.Run run, boolean announce) {
@@ -430,7 +414,8 @@ public final class Achievements {
     public static long progress(Def def) {
         return switch (def.measure()) {
             case EVENT -> isUnlocked(def) ? 1 : 0;
-            case RUNS -> RunHistory.runs().size();
+            // Hypixel's bestiary counts runs and catches from before the mod was installed too.
+            case RUNS -> Math.max(RunHistory.runs().size(), OwnStats.runs());
             case HOURS -> PlaytimeReader.safariMillis() / 3_600_000L;
             case CAUGHT -> {
                 // Yours plus your party's: a teammate's catch reaches you as a loot share.
@@ -438,7 +423,7 @@ public final class Achievements {
                 for (RunHistory.Run run : RunHistory.runs()) {
                     caught += run.caught + run.lootShares;
                 }
-                yield caught;
+                yield Math.max(caught, OwnStats.caught());
             }
             case COINS -> {
                 long coins = 0;
@@ -453,7 +438,6 @@ public final class Achievements {
             case DRY_UNIQUE -> Math.max(data.longestRunsWithoutUnique, data.runsSinceOwnUnique);
             case RUNS_SINCE_MACAW -> Math.max(data.longestRunsWithoutMacaw, data.runsSinceMacaw);
             case CONTESTS -> data.contestsCompleted;
-            case EMBLEMS -> data.emblems.size();
         };
     }
 
@@ -610,7 +594,7 @@ public final class Achievements {
     }
 
     /** Bump whenever achievements are added, removed or re-tuned. */
-    private static final int LIST_VERSION = 2;
+    private static final int LIST_VERSION = 3;
 
     /**
      * The achievement list changed: drop unlocks of achievements that no longer exist, and unlock
@@ -639,25 +623,18 @@ public final class Achievements {
 
     // ------------------------------------------------------------------ reading
 
-    /** Every achievement, including one per emblem unlocked. */
+    /** Every achievement. */
     public static List<Def> all() {
-        List<Def> out = new ArrayList<>(ALL);
-        for (String emblem : data.emblems.keySet()) {
-            out.add(new Def("emblem:" + emblem, emblem + " Emblem", "Unlock the " + emblem + " emblem.",
-                    Tier.EPIC, false, Measure.EVENT, 1));
-        }
-        return out;
+        return new ArrayList<>(ALL);
     }
 
     public static boolean isUnlocked(Def def) {
-        return def.id().startsWith("emblem:")
-                ? data.emblems.containsKey(def.id().substring(7))
-                : data.unlocked.containsKey(def.id());
+        return data.unlocked.containsKey(def.id());
     }
 
     /** When it was unlocked, or 0. */
     public static long unlockedAt(Def def) {
-        Long at = def.id().startsWith("emblem:") ? data.emblems.get(def.id().substring(7)) : data.unlocked.get(def.id());
+        Long at = data.unlocked.get(def.id());
         return at == null ? 0 : at;
     }
 
@@ -731,7 +708,24 @@ public final class Achievements {
                 }
             }
         }
+        dex.addAll(OwnStats.dex());
         return dex;
+    }
+
+    /**
+     * Your own profile was read from the API: whatever its runs, catches and dex now earn is unlocked
+     * quietly, and the caller reports the count in one line.
+     *
+     * @return how many achievements this unlocked
+     */
+    public static int afterApiStats() {
+        if (!data.initialised) {
+            return 0;
+        }
+        int before = data.unlocked.size();
+        checkAll(false);
+        save();
+        return data.unlocked.size() - before;
     }
 
     // ------------------------------------------------------------------ storage

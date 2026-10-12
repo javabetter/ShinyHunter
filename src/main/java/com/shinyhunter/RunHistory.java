@@ -158,6 +158,7 @@ public final class RunHistory {
         ShinyHunterClient.LOGGER.info("Run #{} saved: {} party, {} you, {} caught, {} sparkling(s)",
                 run.number, run.party, run.you, run.caught, run.sparklings.size());
         Achievements.onRunEnd(run);
+        OwnStats.refreshSoon(); // the bestiary now has this run too
     }
 
     public static void onTicket() {
