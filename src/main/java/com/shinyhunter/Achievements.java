@@ -127,7 +127,6 @@ public final class Achievements {
     static final Def NO_MACAW_3 = add("no_macaw_3", "Where's the Macaw?", "3 runs in a row without a Macaw.", Tier.UNCOMMON, Measure.RUNS_SINCE_MACAW, 3);
     static final Def NO_MACAW_5 = add("no_macaw_5", "Macaw Drought", "5 runs in a row without a Macaw.", Tier.RARE, Measure.RUNS_SINCE_MACAW, 5);
     static final Def NO_MACAW_8 = add("no_macaw_8", "Extinct", "8 runs in a row without a Macaw.", Tier.EPIC, Measure.RUNS_SINCE_MACAW, 8);
-    static final Def NO_MACAW_10 = add("no_macaw_10", "Myth of the Macaw", "10 runs in a row without a Macaw.", Tier.MYTHIC, Measure.RUNS_SINCE_MACAW, 10);
 
     // ---- drops and emblems
     static final Def EMERALD_DYE = event("emerald_dye", "Emerald Dye", "Find an Emerald Dye.", Tier.DIVINE);

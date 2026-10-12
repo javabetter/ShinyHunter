@@ -74,6 +74,21 @@ public final class NestSurvey {
     /** How far around the player to look. The client only has what's loaded anyway. */
     private static final int SCAN_RADIUS = 96;
 
+    /**
+     * Every Torrhus Canyon honeyhive known so far, with the API id where it's been matched, so the
+     * beacons work before anyone has surveyed. Merged into the file on load; positions found later
+     * by the survey or by looting are added to it.
+     */
+    private static final String[][] BUILT_IN = {
+            {"-733,128,188", null}, {"-729,129,187", "hive_5"}, {"-730,132,184", null},
+            {"-724,92,204", "hive_10"}, {"-721,92,207", "hive_4"}, {"-724,93,211", "hive_3"},
+            {"-707,92,220", "hive_6"}, {"-705,92,225", "hive_7"}, {"-696,93,150", "hive_8"},
+            {"-693,93,153", "hive_9"}, {"-693,94,147", "hive_12"}, {"-665,97,167", null},
+            {"-664,96,170", "hive_11"}, {"-611,98,274", "hive_13"}, {"-606,98,275", "hive_16"},
+            {"-577,102,205", "hive_19"}, {"-572,101,206", "hive_18"}, {"-588,150,257", "hive_15"},
+            {"-581,152,258", "hive_17"}, {"-578,151,256", "hive_14"},
+    };
+
     private static Data data = new Data();
     private static boolean loaded;
     private static int tickCounter;
@@ -256,6 +271,47 @@ public final class NestSurvey {
         return data.nests;
     }
 
+    /**
+     * Makes sure a looted bee nest is in the list (its build may not match the survey's) and
+     * returns its key.
+     */
+    public static String addHive(BlockPos pos, String zone) {
+        load();
+        String key = pos.getX() + "," + pos.getY() + "," + pos.getZ();
+        if (!data.nests.containsKey(key)) {
+            Nest nest = new Nest();
+            nest.x = pos.getX();
+            nest.y = pos.getY();
+            nest.z = pos.getZ();
+            nest.honeyLevel = -1;
+            nest.zone = zone;
+            nest.seen = java.time.Instant.now().toString();
+            data.nests.put(key, nest);
+            save();
+            ShinyHunterClient.LOGGER.info("Honeyhive {} added from a loot", key);
+        }
+        return key;
+    }
+
+    private static void mergeBuiltIn() {
+        for (String[] entry : BUILT_IN) {
+            String[] xyz = entry[0].split(",");
+            Nest nest = data.nests.get(entry[0]);
+            if (nest == null) {
+                nest = new Nest();
+                nest.x = Integer.parseInt(xyz[0]);
+                nest.y = Integer.parseInt(xyz[1]);
+                nest.z = Integer.parseInt(xyz[2]);
+                nest.honeyLevel = -1;
+                nest.zone = "";
+                data.nests.put(entry[0], nest);
+            }
+            if (nest.hive == null && entry[1] != null && !hiveTaken(entry[1], entry[0])) {
+                nest.hive = entry[1];
+            }
+        }
+    }
+
     /** Records which API hive id a surveyed position turned out to be. */
     public static void bindHive(String key, String hive) {
         load();
@@ -320,6 +376,7 @@ public final class NestSurvey {
         loaded = true;
         Path file = path();
         if (!Files.exists(file)) {
+            mergeBuiltIn();
             return;
         }
         try {
@@ -335,6 +392,7 @@ public final class NestSurvey {
         } catch (IOException | RuntimeException e) {
             ShinyHunterClient.LOGGER.warn("Couldn't read the nest survey — starting empty", e);
         }
+        mergeBuiltIn();
     }
 
     private static void save() {

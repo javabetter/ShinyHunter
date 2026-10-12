@@ -147,7 +147,6 @@ public class ShinyMoulConfig extends Config {
     @Category(name = "Tracked blocks", desc = "Tracked blocks")
     public TrackedBlocksCategory trackedBlocks = new TrackedBlocksCategory();
 
-
     /** Category identifier -> the section name the old screen filters on. */
     public static final Map<Integer, String> LIST_EDITORS = Map.of(
             0, "Tracked entities",
@@ -326,11 +325,6 @@ public class ShinyMoulConfig extends Config {
         @ConfigOption(name = "Hive range", desc = "How far away a hive can be and still get a beacon.")
         @ConfigEditorSlider(minValue = 16f, maxValue = 512f, minStep = 1f)
         public int honeyHiveRange;
-
-        @Expose
-        @ConfigOption(name = "Beacon unknown hives", desc = "Also beacon hives whose state isn't known yet, dimmer.")
-        @ConfigEditorBoolean
-        public boolean honeyHiveShowUnknown;
 
         @Expose
         @ConfigOption(name = "Refill countdown", desc = "Over a hive you looted, show how long until it refills. Remembered across restarts.")

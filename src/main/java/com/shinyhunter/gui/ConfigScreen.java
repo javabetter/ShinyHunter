@@ -246,8 +246,6 @@ public class ConfigScreen extends Screen {
                 () -> c.honeyHiveThroughWalls, v -> c.honeyHiveThroughWalls = v);
         number("Hive range", "How far away a hive can be and still get a beacon.",
                 () -> c.honeyHiveRange, v -> c.honeyHiveRange = v, 16, 512);
-        bool("Beacon unknown hives", "Also beacon hives whose state isn't known yet, dimmer.",
-                () -> c.honeyHiveShowUnknown, v -> c.honeyHiveShowUnknown = v);
         bool("Refill countdown", "Over a hive you looted, show how long until it refills. Remembered across restarts.",
                 () -> c.honeyHiveShowRefill, v -> c.honeyHiveShowRefill = v);
         bool("Nest survey", "Record fence+trapdoor bee nests to config/shinyhunter-nests.json.",

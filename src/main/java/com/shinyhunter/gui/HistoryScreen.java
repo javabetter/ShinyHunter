@@ -392,7 +392,7 @@ public final class HistoryScreen extends Screen {
         g.text(font, "Luck", rx, ry, 0xFFDDDDDD);
         ry += 13;
         ry = record(g, rx, ry, "Dry streak", Achievements.longestDrySparkling() + " runs", null);
-        record(g, rx, ry, "Macaw drought", Achievements.progress(achievement("no_macaw_10")) + " runs", null);
+        record(g, rx, ry, "Macaw drought", Achievements.progress(achievement("no_macaw_8")) + " runs", null);
     }
 
     private int record(GuiGraphicsExtractor g, int x, int y, String label, String value, RunHistory.Run run) {
