@@ -648,6 +648,9 @@ public final class ShinyConfig {
     /** Track which critters have turned up on the current Safari instance. */
     public boolean trackCritters = true;
 
+    /** What a Safari run is going for: "unique", "fullclear" or "sparkling". See {@link SafariMode}. */
+    public String safariMode = "unique";
+
     /** Show a HUD panel per biome listing the critters still missing. */
     public boolean showCritterHud = true;
 

@@ -164,7 +164,7 @@ public final class EntityHighlighter {
                         String kind = identifyShulker(client, entity);
                         // Once it's known and caught, the box and the name both go — unless asked
                         // to keep shulkers lit regardless; the name is remembered either way.
-                        if (kind == null || config.alwaysHighlightShulkers || !CritterTracker.isFound(kind)) {
+                        if (kind == null || config.alwaysHighlightShulkers || SafariMode.highlight(kind)) {
                             MATCHED.put(entity.getId(), new Hit(missingCritter, kind == null ? UNKNOWN_SHULKER : kind));
                         }
                     }
@@ -173,7 +173,7 @@ public final class EntityHighlighter {
                 String critter = CritterDex.findIn(rawName);
                 if (critter != null) {
                     // The name stand of a shulker is drawn as part of the shulker, not on its own.
-                    if (!CritterTracker.isFound(critter) && !isCaptureUi(entity, captureNameplates)
+                    if (SafariMode.highlight(critter) && !isCaptureUi(entity, captureNameplates)
                             && !nearAny(entity, shulkers)) {
                         // The name rides on an armour stand; the box belongs on the mob under it.
                         Entity body = bodyUnder(client, entity);

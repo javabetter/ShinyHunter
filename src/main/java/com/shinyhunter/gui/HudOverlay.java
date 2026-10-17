@@ -177,8 +177,8 @@ public final class HudOverlay {
 
     /** The "(personal / party)" tail. Omitted entirely when neither best has been set yet. */
     private static String bests(ShinyConfig config, String key) {
-        Long personal = config.personalBests.get(key);
-        Long party = config.partyBests.get(key);
+        Long personal = config.personalBests.get(com.shinyhunter.SafariMode.bestKey(key));
+        Long party = config.partyBests.get(com.shinyhunter.SafariMode.bestKey(key));
         if (personal == null && party == null) {
             return "";
         }
@@ -316,7 +316,7 @@ public final class HudOverlay {
         }
 
         List<String> missing = CritterTracker.missing(biome);
-        int total = CritterDex.critters(biome).size();
+        int total = com.shinyhunter.SafariMode.counted(biome).size();
         if (missing.isEmpty()) {
             // Worth keeping on screen: "done" is information too, and it stops the panels above
             // shuffling upward the moment a biome completes.
@@ -334,7 +334,7 @@ public final class HudOverlay {
         int shown = capped ? max : missing.size();
 
         for (int i = 0; i < shown; i++) {
-            lines.add("§7• §f" + missing.get(i));
+            lines.add("§7• §f" + com.shinyhunter.SafariMode.row(missing.get(i)));
         }
         if (capped) {
             lines.add("§8+ " + (missing.size() - shown) + " others...");

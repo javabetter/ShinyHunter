@@ -292,6 +292,8 @@ public class ConfigScreen extends Screen {
         section("Critters");
         bool("Track critters", "Record which critters turn up on this Safari instance.",
                 () -> c.trackCritters, v -> c.trackCritters = v);
+        text("Run mode", "unique, fullclear or sparkling: what the missing panels, !m, splits and outlines go for. /shiny mode switches.",
+                () -> c.safariMode, v -> c.safariMode = v);
         bool("Missing HUD panels", "One panel per biome listing what's still missing.",
                 () -> c.showCritterHud, v -> c.showCritterHud = v);
         bool("Highlight missing only", "Outline critters still outstanding; drop each when caught.",

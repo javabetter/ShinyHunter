@@ -150,7 +150,7 @@ public final class SplitTracker {
 
     /** " §7(-2.10s PB)" style tail, or empty when there's nothing to compare against. */
     private static String comparison(String key, long elapsed) {
-        Long best = ShinyConfig.get().personalBests.get(key);
+        Long best = ShinyConfig.get().personalBests.get(SafariMode.bestKey(key));
         if (best == null) {
             return " §8(first)";
         }
@@ -196,11 +196,12 @@ public final class SplitTracker {
             long time = split.getValue();
 
             // The whole party ran every split, so every one of them counts for the party best.
-            Long partyBest = config.partyBests.get(key);
+            String bestKey = SafariMode.bestKey(key);
+            Long partyBest = config.partyBests.get(bestKey);
             if (partyBest == null || time < partyBest) {
-                config.partyBests.put(key, time);
+                config.partyBests.put(bestKey, time);
                 changed = true;
-                ShinyHunterClient.LOGGER.info("New party best for {}: {}", key, SafariTimer.format(time));
+                ShinyHunterClient.LOGGER.info("New party best for {}: {}", bestKey, SafariTimer.format(time));
                 Debug.log("party best:", key, SafariTimer.format(time));
             } else {
                 Debug.log("no party best:", key, SafariTimer.format(time),
@@ -212,11 +213,11 @@ public final class SplitTracker {
                         OWN_CATCHES.getOrDefault(key, 0), "of", config.ownBiomeMinCatches, "needed");
                 continue;
             }
-            Long personalBest = config.personalBests.get(key);
+            Long personalBest = config.personalBests.get(bestKey);
             if (personalBest == null || time < personalBest) {
-                config.personalBests.put(key, time);
+                config.personalBests.put(bestKey, time);
                 changed = true;
-                ShinyHunterClient.LOGGER.info("New personal best for {}: {}", key, SafariTimer.format(time));
+                ShinyHunterClient.LOGGER.info("New personal best for {}: {}", bestKey, SafariTimer.format(time));
                 Debug.log("PERSONAL best:", key, SafariTimer.format(time));
             } else {
                 Debug.log("no personal best:", key, SafariTimer.format(time),

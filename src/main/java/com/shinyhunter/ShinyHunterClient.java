@@ -44,6 +44,7 @@ public class ShinyHunterClient implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(BeeNestHighlighter::onClientTick);
         ClientTickEvents.END_CLIENT_TICK.register(NestSurvey::onClientTick);
         ClientTickEvents.END_CLIENT_TICK.register(HoneyHives::onClientTick);
+        ClientTickEvents.END_CLIENT_TICK.register(SafariMode::onClientTick);
         ClientTickEvents.END_CLIENT_TICK.register(OwnStats::onClientTick);
         ClientTickEvents.END_CLIENT_TICK.register(com.shinyhunter.gui.moul.MoulConfigBridge::onClientTick);
         ClientTickEvents.END_CLIENT_TICK.register(BlockHighlighter::onClientTick);
@@ -168,6 +169,11 @@ public class ShinyHunterClient implements ClientModInitializer {
                 .then(literal("splits").executes(ShinyHunterClient::showSplits))
                 .then(literal("resetpb").executes(ShinyHunterClient::resetBests))
                 .then(literal("zone").executes(ShinyHunterClient::showZone))
+                .then(literal("mode")
+                        .executes(c -> showMode(c, SafariMode.select(SafariMode.current().next())))
+                        .then(literal("unique").executes(c -> showMode(c, SafariMode.select(SafariMode.UNIQUE))))
+                        .then(literal("fullclear").executes(c -> showMode(c, SafariMode.select(SafariMode.FULL_CLEAR))))
+                        .then(literal("sparkling").executes(c -> showMode(c, SafariMode.select(SafariMode.SPARKLING)))))
                 .then(literal("who").executes(ShinyHunterClient::listPresent))
                 .then(literal("hives").executes(c -> {
                     for (String line : HoneyHives.status()) {
@@ -379,8 +385,8 @@ public class ShinyHunterClient implements ClientModInitializer {
 
         for (String key : SplitTracker.keys()) {
             Long now = SplitTracker.split(key);
-            Long personal = config.personalBests.get(key);
-            Long party = config.partyBests.get(key);
+            Long personal = config.personalBests.get(SafariMode.bestKey(key));
+            Long party = config.partyBests.get(SafariMode.bestKey(key));
             context.getSource().sendFeedback(Component.literal(
                     "  §f" + key + ": "
                             + (now == null ? "§8--" : "§a" + SafariTimer.format(now))
@@ -400,6 +406,16 @@ public class ShinyHunterClient implements ClientModInitializer {
      * that read almost identically, so when a feature fires in the wrong one this settles which
      * string the mod actually saw.
      */
+    private static int showMode(CommandContext<FabricClientCommandSource> context, SafariMode mode) {
+        feedback(context, "Run mode: §e" + mode.label + switch (mode) {
+            case UNIQUE -> " §7— one of each critter.";
+            case FULL_CLEAR -> " §7— every critter that spawns; panels show caught/always-spawns.";
+            case SPARKLING -> " §7— sparklings someone in the party still lacks (needs the API).";
+        });
+        context.getSource().sendFeedback(Component.literal("  §8/shiny mode [unique|fullclear|sparkling] — no argument cycles"));
+        return Command.SINGLE_SUCCESS;
+    }
+
     private static int showZone(CommandContext<FabricClientCommandSource> context) {
         Minecraft client = Minecraft.getInstance();
         ShinyConfig config = ShinyConfig.get();

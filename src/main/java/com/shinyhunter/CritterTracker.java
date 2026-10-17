@@ -55,6 +55,9 @@ public final class CritterTracker {
     /** Canonical critter names seen this instance, in the order they turned up. */
     private static final Set<String> FOUND = new LinkedHashSet<>();
 
+    /** How many of each critter the party has secured this instance, for full clears. */
+    private static final java.util.Map<String, Integer> COUNTS = new java.util.HashMap<>();
+
     /** Biomes already called out as complete, so it's said once per instance. */
     private static final Set<String> ANNOUNCED_CLEAR = new LinkedHashSet<>();
 
@@ -221,13 +224,16 @@ public final class CritterTracker {
         if (critter == null) {
             return; // a capture line that didn't name anything in the dex
         }
-        if (!FOUND.add(critter)) {
-            return; // already seen this instance
+        int count = COUNTS.merge(critter, 1, Integer::sum);
+        boolean first = FOUND.add(critter);
+        // Unique and sparkling runs only change on a critter's first catch; a full clear on any.
+        if (!first && SafariMode.current() != SafariMode.FULL_CLEAR) {
+            return;
         }
 
         String biome = CritterDex.biomeOf(critter);
-        ShinyHunterClient.LOGGER.info("Critter found: {} ({}) — {}/{} this instance",
-                critter, biome, FOUND.size(), CritterDex.total());
+        ShinyHunterClient.LOGGER.info("Critter secured: {} x{} ({}) — {}/{} kinds this instance",
+                critter, count, biome, FOUND.size(), CritterDex.total());
         Debug.log("secured:", critter, "(" + biome + ")", FOUND.size() + "/" + CritterDex.total(),
                 "- " + biome + " still missing", missing(biome));
 
@@ -246,7 +252,7 @@ public final class CritterTracker {
 
         // Announced once per instance, keyed in the same set as the per-biome calls so it can't
         // repeat if a later loot share re-enters this path.
-        if (config.announceAllUniques && FOUND.size() >= CritterDex.total()
+        if (config.announceAllUniques && SafariMode.current() == SafariMode.UNIQUE && FOUND.size() >= CritterDex.total()
                 && ANNOUNCED_CLEAR.add("*all*")) {
             PartyChat.send(config.critterChannel, "All uniques caught!");
         }
@@ -255,19 +261,27 @@ public final class CritterTracker {
     // ------------------------------------------------------------------ state
 
     /**
-     * Critters of this biome not yet seen on the current instance.
+     * Critters of this biome still outstanding on the current instance, by the current
+     * {@link SafariMode}: not yet secured (unique), short of what always spawns (full clear), or a
+     * sparkling someone in the party lacks and nobody has caught yet (sparkling).
      *
-     * <p>Sparklings the whole party already has are left out when that option is on — the party
-     * agreed to skip them, so they shouldn't sit on the list, hold a biome open, or delay a split.
+     * <p>In a unique run, sparklings the whole party already has are left out when that option is
+     * on — the party agreed to skip them, so they shouldn't sit on the list, hold a biome open, or
+     * delay a split.
      */
     public static List<String> missing(String biome) {
         List<String> missing = new ArrayList<>();
         for (String critter : CritterDex.critters(biome)) {
-            if (!FOUND.contains(critter) && !PartyDex.isShared(critter)) {
+            if (SafariMode.outstanding(critter)) {
                 missing.add(critter);
             }
         }
         return missing;
+    }
+
+    /** How many of this critter the party has secured this instance. */
+    public static int count(String critter) {
+        return critter == null ? 0 : COUNTS.getOrDefault(critter, 0);
     }
 
     /** True when this critter has already been secured on the current instance. */
@@ -292,6 +306,7 @@ public final class CritterTracker {
             ShinyHunterClient.LOGGER.info("Critter tracker reset ({} had been found)", FOUND.size());
         }
         FOUND.clear();
+        COUNTS.clear();
         ANNOUNCED_CLEAR.clear();
     }
 }

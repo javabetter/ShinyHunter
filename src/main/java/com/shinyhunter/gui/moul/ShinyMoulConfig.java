@@ -438,6 +438,11 @@ public class ShinyMoulConfig extends Config {
         public boolean trackCritters;
 
         @Expose
+        @ConfigOption(name = "Run mode", desc = "unique, fullclear or sparkling: what the missing panels, !m, splits and outlines go for. /shiny mode switches.")
+        @ConfigEditorText
+        public String safariMode = "";
+
+        @Expose
         @ConfigOption(name = "Missing HUD panels", desc = "One panel per biome listing what's still missing.")
         @ConfigEditorBoolean
         public boolean showCritterHud;
