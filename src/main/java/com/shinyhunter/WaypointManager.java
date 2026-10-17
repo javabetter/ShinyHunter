@@ -117,15 +117,17 @@ public final class WaypointManager {
                 int stroke = waypoint.color();
                 int fill = (stroke & 0x00FFFFFF) | 0x33000000;
 
-                Gizmos.cuboid(waypoint.pos(), GizmoStyle.strokeAndFill(stroke, 2.0f, fill))
+                HighlightMarkers.add(centreOf(waypoint.pos()), stroke, waypoint.label());
+                var box = Gizmos.cuboid(waypoint.pos(), GizmoStyle.strokeAndFill(stroke, 2.0f, fill))
                         .persistForMillis(GIZMO_LIFETIME_MILLIS);
+                Shaders.place(box, !Edition.PUBLIC);
 
                 // Distance is recomputed every tick so the label counts down as you approach.
                 int distance = (int) Math.round(centreOf(waypoint.pos()).distanceTo(client.player.position()));
-                Gizmos.billboardTextOverBlock(
+                Shaders.place(Gizmos.billboardTextOverBlock(
                                 waypoint.label() + "  " + distance + "m",
                                 waypoint.pos(), 0, stroke, 0.8f)
-                        .persistForMillis(GIZMO_LIFETIME_MILLIS);
+                        .persistForMillis(GIZMO_LIFETIME_MILLIS), false);
             }
         } catch (IllegalStateException e) {
             // No gizmo collector on this thread — see BeeNestHighlighter for when that can happen.

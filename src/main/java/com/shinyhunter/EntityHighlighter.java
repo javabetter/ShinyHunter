@@ -334,8 +334,8 @@ public final class EntityHighlighter {
     }
 
     private static void maybeAnnounce(Minecraft client, Entity entity, long now) {
-        // Only what's in view is announced, and without a position.
-        if (!Sight.canDetect(client, entity)) {
+        // The public edition announces only what's in view, and without a position.
+        if (Edition.PUBLIC && !Sight.canDetect(client, entity)) {
             return;
         }
         Long last = ANNOUNCED.get(entity.getId());
@@ -344,8 +344,18 @@ public final class EntityHighlighter {
         }
         ANNOUNCED.put(entity.getId(), now);
 
+        Vec3 pos = entity.position();
         String name = EntityDataProbe.nameOf(entity).trim();
-        client.player.sendSystemMessage(Component.literal("§b[Shiny Hunter] §f" + name + " §7spotted"));
+        if (Edition.PUBLIC) {
+            client.player.sendSystemMessage(Component.literal("§b[Shiny Hunter] §f" + name + " §7spotted"));
+            return;
+        }
+        // Announcing trackers report coordinates, so they get a marker too.
+        WaypointManager.add(entity.blockPosition(), name.isEmpty() ? "Tracked" : name);
+        client.player.sendSystemMessage(Component.literal(
+                "§b[Shiny Hunter] §f" + name + " §7at "
+                        + (int) pos.x + ", " + (int) pos.y + ", " + (int) pos.z
+                        + " §8(" + Math.round(client.player.distanceTo(entity)) + "m)"));
     }
 
     private static List<Entity> findCaptureNameplates(Minecraft client) {
@@ -395,17 +405,19 @@ public final class EntityHighlighter {
                 int fill = (stroke & 0x00FFFFFF) | 0x33000000;
                 GizmoStyle style = GizmoStyle.strokeAndFill(stroke, 2.0f, fill);
 
+                HighlightMarkers.add(entity.getBoundingBox().getCenter(), stroke, label);
                 // Oversized on purpose: a snug box z-fights with the mob's own faces (shulkers),
                 // hides a tiny mob instead of showing it (Gazer), and is buried inside the block a
                 // still Duplico is pretending to be.
                 double grow = Math.max(0.05, config.highlightBoxGrow);
                 double minSize = Math.max(0.0, config.highlightBoxMinSize);
-                Gizmos
+                var properties = Gizmos
                         .addGizmo(new EntityBoxGizmo(entry.getKey(), grow, minSize, style))
                         .persistForMillis(GIZMO_LIFETIME_MILLIS);
                 if (config.highlightTintMobs) {
                     tints.put(entry.getKey(), tintOf(stroke));
                 }
+                Shaders.place(properties, config.highlightThroughWalls && !Edition.PUBLIC);
 
                 // "default" draws a name only where the game shows none of its own, so a second
                 // "Hideonwall" never floats over Hypixel's; "always" draws it regardless, which is
@@ -414,12 +426,13 @@ public final class EntityHighlighter {
                         : config.highlightLabelMode.trim().toLowerCase();
                 boolean wantLabel = config.highlightLabels && !label.isEmpty() && !mode.equals("never")
                         && (mode.equals("always") || !hasGameNametag(client, entity))
-                        // Only a label you could actually see from here. Checked by ray rather
-                        // than trusted to the depth buffer, which shader packs bypass.
-                        && Sight.canSeePoint(client, labelPoint(entity));
+                        // Public: only a label you could actually see from here. Checked by ray
+                        // rather than trusted to the depth buffer, which shader packs bypass.
+                        && (!Edition.PUBLIC || Sight.canSeePoint(client, labelPoint(entity)));
                 if (wantLabel) {
-                    Gizmos.billboardTextOverMob(entity, 0, label, stroke, 0.7f)
+                    var text = Gizmos.billboardTextOverMob(entity, 0, label, stroke, 0.7f)
                             .persistForMillis(GIZMO_LIFETIME_MILLIS);
+                    Shaders.place(text, !Edition.PUBLIC);
                 }
             }
         } catch (IllegalStateException e) {

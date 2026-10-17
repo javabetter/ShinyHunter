@@ -19,6 +19,15 @@ import java.util.Map;
  * code to start saving.
  */
 public final class ShinyConfig {
+    /**
+     * Treat the party as public: hold back anything that gives away a location — emptied bee nests,
+     * shard trade call-outs — and show it only to you instead. Everything harmless still goes out,
+     * so readiness and timers keep working with strangers in the party.
+     *
+     * <p>On by default: a fresh install is most likely to be used in parties of strangers, and a
+     * find is the one thing worth not broadcasting by accident. Turn it off for a regular group.
+     */
+    public boolean publicParty = true;
 
     /** Set once the first-join hello has been printed. */
     public boolean welcomeShown = false;
@@ -84,7 +93,7 @@ public final class ShinyConfig {
     public int unclaimedContestWarnAt = 25;
 
     /** Say "Ticket earned!" in party chat when Miria's Contest reaches Uncommon or higher. */
-    public boolean announceTicketEarned = false;
+    public boolean announceTicketEarned = !Edition.PUBLIC;
 
     /**
      * Safari Join Assist role: "none", "joiner" (player 1, who enters the Safari and warps the
@@ -165,16 +174,29 @@ public final class ShinyConfig {
     /** Play a level-up ding on a find. */
     public boolean playSound = true;
 
+    /** Client-side glow outline on the matched entity, so it's findable in a crowded lobby. */
+    public boolean glowMatches = true;
+
     /** Also show the alert on the action bar, not just in chat. */
     public boolean actionBar = true;
 
     /** Don't re-announce the same entity again until this many seconds have passed. */
     public int renotifySeconds = 60;
 
+    /**
+     * Also search each entity's synced fields and item data (names, lore, custom-data NBT), not just
+     * its nameplate. This is what catches mobs whose identity is carried by a displayed item rather
+     * than a name. Costs more per scan, hence {@link #deepScanSeconds}.
+     */
+    public boolean scanEntityData = true;
+
+    /** How long a deep-scan result is reused for a given entity before it's re-examined. */
+    public int deepScanSeconds = 5;
+
     // ---------------------------------------------------------------- hotspot relay
 
     /** Relay Hypixel's "Hunting Hotspot" announcement to a chat channel. */
-    public boolean announceHotspot = false;
+    public boolean announceHotspot = !Edition.PUBLIC;
 
     /** The chat command to relay through — {@code pc} for party, {@code gc} for guild, {@code ac} for all. */
     public String hotspotCommand = "pc";
@@ -228,6 +250,73 @@ public final class ShinyConfig {
 
     /** How far away a display-built drop may be and still be outlined. 0 uses the scan radius. */
     public int floorDropDisplayRadius = 0;
+
+    /** Draw the outlines through terrain. */
+    public boolean floorDropThroughWalls = true;
+
+    /** What a Safari run is going for: "unique", "fullclear" or "sparkling". See {@link SafariMode}. */
+    public String safariMode = "unique";
+
+    /** Log each floor drop's item_display ids and what it gave, per run, to shinyhunter-floor-drops.json. */
+    public boolean floorDropLog = true;
+
+    /** Also say each logged floor drop in chat. */
+    public boolean floorDropLogChat = false;
+
+    /** Label each floor drop with what it will give, from the run's spawn order. */
+    public boolean floorDropPredict = true;
+
+    /** Size of the floor drop labels. */
+    public double floorDropLabelScale = 1.0;
+
+    /** Label colour: "type" for each drop type's own colour, or a hex colour for all. */
+    public String floorDropLabelColour = "type";
+
+    /** A box around each predicted drop, in its label's colour. */
+    public boolean floorDropBoxes = true;
+
+    /** A stand-in dropped item on each predicted drop. */
+    public boolean floorDropFakeItems = true;
+
+    /** Outline the stand-in items in their drop type's colour. */
+    public boolean floorDropFakeOutline = true;
+
+    /** How far away predicted drops are shown, in blocks. */
+    public int floorDropRange = 64;
+
+    /** Only show predicted drops in the biome you're in. */
+    public boolean floorDropOnlyMyBiome = false;
+
+    // Per floor drop type: shown, colour, and hide after picking up this many in a run (0 = never).
+    public boolean fdLimeShow = true;
+    public String fdLimeColour = "55FF55";
+    public int fdLimeHideAfter = 0;
+    public boolean fdPurpleShow = true;
+    public String fdPurpleColour = "C04BFF";
+    public int fdPurpleHideAfter = 0;
+    public boolean fdOrangeShow = true;
+    public String fdOrangeColour = "FF9A1F";
+    public int fdOrangeHideAfter = 0;
+    public boolean fdWormShow = true;
+    public String fdWormColour = "FFFFFF";
+    public int fdWormHideAfter = 0;
+    public boolean fdBerryShow = true;
+    public String fdBerryColour = "FFFFFF";
+    public int fdBerryHideAfter = 0;
+    public boolean fdSeedsShow = true;
+    public String fdSeedsColour = "FFFFFF";
+    public int fdSeedsHideAfter = 0;
+    public boolean fdIncenseShow = true;
+    public String fdIncenseColour = "FFFFFF";
+    public int fdIncenseHideAfter = 4;
+    public boolean fdCoinShow = true;
+    public String fdCoinColour = "FFFF55";
+    public int fdCoinHideAfter = 0;
+    public boolean fdIcebreakerShow = true;
+    public String fdIcebreakerColour = "FFFFFF";
+    public int fdIcebreakerHideAfter = 0;
+    public boolean fdRandomShow = true;
+    public String fdRandomColour = "AAAAAA";
 
     // ---------------------------------------------------------------- named entity highlight
 
@@ -298,6 +387,9 @@ public final class ShinyConfig {
     /** How far from the player to search for tracked blocks, in blocks. */
     public int blockScanRadius = 64;
 
+    /** Draw tracked-block outlines through terrain. */
+    public boolean blockThroughWalls = true;
+
     /**
      * Everything being tracked. Empty by default: the critters that used to be listed here are
      * already outlined by the missing-critter highlighter, which knows what has been caught — two
@@ -333,6 +425,9 @@ public final class ShinyConfig {
     /** Tint outlined mobs toward their outline colour, so the mob itself stands out too. */
     public boolean highlightTintMobs = true;
 
+    /** Draw the outlines through terrain. */
+    public boolean highlightThroughWalls = true;
+
     /**
      * Also match watched names against item and NBT data, not just the nameplate — needed for
      * things that carry no visible name, like the rocks that precede a Rockmite.
@@ -361,6 +456,9 @@ public final class ShinyConfig {
 
     /** Outline colour as hex, with or without a leading {@code #}. */
     public String groundObjectColor = "B98A5A";
+
+    /** Draw the outlines through terrain. */
+    public boolean groundObjectThroughWalls = true;
 
     /** Print coordinates in chat when one is spotted. */
     public boolean groundObjectAnnounce = false;
@@ -471,7 +569,17 @@ public final class ShinyConfig {
     /** How far back the trail is counted, in seconds. */
     public int particleWindowSeconds = 5;
 
- // Driftling (entity dump)
+    /** Treat a sparkling-only skin texture as a sparkling — how Hideyho gives itself away. */
+    public boolean textureDetection = true;
+
+    /**
+     * Skin texture hashes (the tail of a textures.minecraft.net URL) that only sparkling critters
+     * wear. Prefix matching, so a full hash or its first dozen characters both work. Seeded with
+     * the one hash Skyblocker uses for the same purpose.
+     */
+    public List<String> sparklingTextures = new ArrayList<>(List.of(
+            "5dbaab74d1acd0abe9d04abe9928725de5d4495fcb63b647228caf6944c20800",   // Duplico (Skyblocker)
+            "bede15b78c9a066ccef64a90ff670f95fdfca52d40d5879b1d17929bb632cc31")); // Driftling (entity dump)
 
     // ---------------------------------------------------------------- party dex
 
@@ -479,13 +587,19 @@ public final class ShinyConfig {
     public boolean partyDexEnabled = true;
 
     /** Post the shared-sparklings result to party chat automatically when the party fills. */
-    public boolean partyDexAnnounce = false;
+    public boolean partyDexAnnounce = !Edition.PUBLIC;
 
     /** Answer {@code !shared} in party chat. Independent of the automatic party-dex lookups. */
     public boolean sharedCommand = true;
 
     /** Leave sparklings the whole party already has off the missing list and HUD. */
     public boolean partyDexSkipShared = true;
+
+    /**
+     * Your Hypixel developer key, from developer.hypixel.net. Only ever sent to api.hypixel.net in
+     * a request header; never logged. Blank disables all lookups.
+     */
+    public String hypixelApiKey = "";
 
     /** Most sparklings {@code !shared} lists before "(+N more)". */
     public int sharedListMax = 15;
@@ -530,6 +644,9 @@ public final class ShinyConfig {
     public String safariManagerName = "Safari Manager";
 
     // ---------------------------------------------------------------- snoozling walls
+
+    /** Show how many of the Snoozling walls have been broken. */
+    public boolean trackSnoozlingWalls = true;
 
     /** Waypoints on the Snoozling walls still standing, visible through terrain, while in the Safari. */
     public boolean snoozlingWallWaypoints = true;
@@ -604,11 +721,20 @@ public final class ShinyConfig {
 
     // ---------------------------------------------------------------- hideyho
 
+    /** Answer {@code !hidey} / {@code !hideyho} in party chat with plain coordinates. */
+    public boolean hideyhoCommand = true;
+
+    /** Enable {@code /sharehidey}, {@code /shide} and {@code /hide} as typed alternatives. */
+    public boolean hideyhoSlashCommands = true;
+
     /** The critter whose position is remembered for that command. */
     public String hideyhoName = "Hideyho";
 
     /** Channel command used to answer. */
     public String hideyhoChannel = "pc";
+
+    /** Title and chat line saying whether Hideyho hid inside or outside the mansion. */
+    public boolean hideyhoInsideOutside = true;
 
     /** Every spot Hideyho can hide at, as "x,y,z". It's judged settled once within a few blocks of one. */
     public List<String> hideyhoSpots = new ArrayList<>(List.of(
@@ -648,9 +774,6 @@ public final class ShinyConfig {
     /** Track which critters have turned up on the current Safari instance. */
     public boolean trackCritters = true;
 
-    /** What a Safari run is going for: "unique", "fullclear" or "sparkling". See {@link SafariMode}. */
-    public String safariMode = "unique";
-
     /** Show a HUD panel per biome listing the critters still missing. */
     public boolean showCritterHud = true;
 
@@ -668,7 +791,7 @@ public final class ShinyConfig {
     public Map<String, Integer> critterHudMax = new LinkedHashMap<>();
 
     /** Announce "All uniques caught!" once every biome is complete. */
-    public boolean announceAllUniques = false;
+    public boolean announceAllUniques = !Edition.PUBLIC;
 
     /**
      * The mark used for a completed biome in the {@code !missing} summary.
@@ -690,16 +813,23 @@ public final class ShinyConfig {
     public boolean alwaysHighlightShulkers = false;
 
     /** Announce "<biome> clear!" once every critter in a biome has been seen. */
-    public boolean announceBiomeClear = false;
+    public boolean announceBiomeClear = !Edition.PUBLIC;
 
     /** Announce "Forest 8/9, missing Macaw" the moment the Macaw is the only Forest critter left. */
-    public boolean announceMacawOnly = false;
+    public boolean announceMacawOnly = !Edition.PUBLIC;
 
     /** Reply in chat when somebody asks the party with {@code !missing}. */
     public boolean respondToMissing = true;
 
     /** Channel command used for critter call-outs. */
     public String critterChannel = "pc";
+
+    /**
+     * On-screen markers for highlights, for when a shader pack eats the through-wall outlines.
+     * {@code auto} turns them on only when a shader loader is installed; {@code always} and
+     * {@code never} force it either way.
+     */
+    public String shaderMarkers = "auto";
 
     /** Show the on-screen HUD panels. */
     public boolean showHud = true;
@@ -754,6 +884,9 @@ public final class ShinyConfig {
     /** Outline colour as hex, with or without a leading {@code #} and optional alpha pair. */
     public String beeNestColor = "66D9FF";
 
+    /** Draw the outlines through terrain, so a nest behind a hill is still visible. */
+    public boolean beeNestThroughWalls = true;
+
     /**
      * Record fixture bee nests (oak fence below, oak trapdoor above) to
      * {@code config/shinyhunter-nests.json} while walking the survey area.
@@ -797,9 +930,9 @@ public final class ShinyConfig {
     public boolean honeyHiveShowRefill = true;
 
     /**
-     * Draw the box on the hive block through terrain.
+     * Draw the box on the hive block through terrain, in both editions.
      *
-     * <p>The one outline allowed through walls, alongside the Snoozling wall markers: a hive is
+     * <p>Deliberately not gated on the edition, unlike every other through-wall option: a hive is
      * a fixed piece of scenery whose position is public knowledge and already written down in the
      * survey file, so the outline shows where a thing that never moves is, not where anything
      * hidden is. The beam above it is a real beacon beam and is occluded like one.
@@ -818,9 +951,6 @@ public final class ShinyConfig {
      * range at which the server bothers to send entities.
      */
     public int beeNestScanRadius = 128;
-
-    /** Draw the outlines through terrain, so a nest behind a hill is still visible. Nests never move. */
-    public boolean beeNestThroughWalls = true;
 
     // ---------------------------------------------------------------- persistence
 
@@ -878,6 +1008,9 @@ public final class ShinyConfig {
                     loaded.huntOutsideSafari = null;
                     if (loaded.renotifySeconds < 0) {
                         loaded.renotifySeconds = 60;
+                    }
+                    if (loaded.deepScanSeconds < 1) {
+                        loaded.deepScanSeconds = 5;
                     }
                     if (loaded.hotspotCommand == null || loaded.hotspotCommand.isBlank()) {
                         loaded.hotspotCommand = "pc";
@@ -1013,6 +1146,9 @@ public final class ShinyConfig {
                     if (loaded.questAcceptLabel == null || loaded.questAcceptLabel.isBlank()) {
                         loaded.questAcceptLabel = "Sure";
                     }
+                    if (loaded.shaderMarkers == null || loaded.shaderMarkers.isBlank()) {
+                        loaded.shaderMarkers = "auto";
+                    }
                     if (loaded.hudPanels == null) {
                         loaded.hudPanels = new LinkedHashMap<>();
                     }
@@ -1030,9 +1166,17 @@ public final class ShinyConfig {
                     if (loaded.contestWarnMinutes == null) {
                         loaded.contestWarnMinutes = "5, 3, 1";
                     }
+                    if (loaded.hypixelApiKey == null) {
+                        loaded.hypixelApiKey = "";
+                    }
                     loaded.sharedListMax = Math.clamp(loaded.sharedListMax, 1, 37);
                     if (loaded.sparklingParticles == null) {
                         loaded.sparklingParticles = new ArrayList<>(List.of("minecraft:wax_on"));
+                    }
+                    if (loaded.sparklingTextures == null) {
+                        loaded.sparklingTextures = new ArrayList<>(List.of(
+                                "5dbaab74d1acd0abe9d04abe9928725de5d4495fcb63b647228caf6944c20800",
+                                "bede15b78c9a066ccef64a90ff670f95fdfca52d40d5879b1d17929bb632cc31"));
                     }
                     // The original defaults (8 in 3s at 2.5 blocks) were a guess that a real
                     // trail never reaches; configs still carrying them get the measured ones.

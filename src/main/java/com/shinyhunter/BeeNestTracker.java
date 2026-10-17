@@ -119,11 +119,17 @@ public final class BeeNestTracker {
         EMPTIED_NESTS.add(immutable);
         BeeNestHighlighter.forget(immutable);
 
-        // Shown only to you: an emptied nest is a location, and locations never go to party chat.
-        if (client.player != null) {
-            client.player.sendSystemMessage(Component.literal("§b[Shiny Hunter] §7Beehive emptied at §f"
-                    + pos.getX() + ", " + pos.getY() + ", " + pos.getZ()));
+        // Through the shared queue so it's spaced against other call-outs, and so a public party
+        // holds it back — an emptied-nest code is a location.
+        if (Edition.PUBLIC) {
+            // Nothing leaves the client, so plain coordinates beat a code nobody will decode.
+            if (client.player != null) {
+                client.player.sendSystemMessage(Component.literal("§b[Shiny Hunter] §7Beehive emptied at §f"
+                        + pos.getX() + ", " + pos.getY() + ", " + pos.getZ()));
+            }
+            return;
         }
+        PartyChat.sendSensitive(config.beeEmptiedChannel, "Beehive emptied at " + code + "!");
     }
 
     // ------------------------------------------------------------------ listening

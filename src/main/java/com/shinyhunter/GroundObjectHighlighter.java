@@ -42,6 +42,32 @@ public final class GroundObjectHighlighter {
     private GroundObjectHighlighter() {
     }
 
+    /**
+     * Private build only: when a disguised Duplico is found, log which ground object was nearest —
+     * the one just clicked — so its {@link #describeOnce} line can be told apart from real rocks.
+     */
+    public static void register() {
+        net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
+            if (overlay || !message.getString().contains("disguised as a block")) {
+                return;
+            }
+            Minecraft client = Minecraft.getInstance();
+            if (client.level == null || client.player == null) {
+                return;
+            }
+            Entity nearest = null;
+            for (Integer id : PAIRED) {
+                Entity display = client.level.getEntity(id);
+                if (display != null && (nearest == null
+                        || client.player.distanceToSqr(display) < client.player.distanceToSqr(nearest))) {
+                    nearest = display;
+                }
+            }
+            ShinyHunterClient.LOGGER.info("Duplico found — nearest ground object: {}",
+                    nearest == null ? "none" : nearest.getId() + " (" + Math.round(client.player.distanceTo(nearest)) + "m away)");
+        });
+    }
+
     public static void onClientTick(Minecraft client) {
         ShinyConfig config = ShinyConfig.get();
 
@@ -102,6 +128,9 @@ public final class GroundObjectHighlighter {
                     continue;
                 }
                 PAIRED.add(display.getId());
+                if (!Edition.PUBLIC) {
+                    describeOnce(client, display, interaction);
+                }
                 if (config.groundObjectAnnounce) {
                     maybeAnnounce(client, display, now);
                 }
@@ -110,6 +139,33 @@ public final class GroundObjectHighlighter {
         }
 
         ANNOUNCED.keySet().removeIf(id -> client.level.getEntity(id) == null);
+    }
+
+    /** Display ids already written to the log by {@link #describeOnce}. */
+    private static final java.util.Set<Integer> DESCRIBED = new java.util.HashSet<>();
+
+    /**
+     * Logs what one ground object is made of, once per object. A still Duplico is built exactly
+     * like a rock or a punchable case — a display plus an interaction, and no nametag until it's
+     * found — so telling them apart needs to know what each one actually carries: the displayed
+     * item, the click box's size, and where it stands.
+     */
+    private static void describeOnce(Minecraft client, Entity display, Entity interaction) {
+        if (!DESCRIBED.add(display.getId())) {
+            return;
+        }
+        if (DESCRIBED.size() > 2000) {
+            DESCRIBED.clear();
+        }
+        var pos = display.position();
+        var box = interaction.getBoundingBox();
+        ShinyHunterClient.LOGGER.info(
+                "Ground object {} at {}, {}, {}: item [{}] | click box {}x{}x{} | display {} above click box",
+                display.getId(), Math.round(pos.x * 10) / 10.0, Math.round(pos.y * 10) / 10.0,
+                Math.round(pos.z * 10) / 10.0, EntityDataProbe.itemText(display),
+                Math.round(box.getXsize() * 100) / 100.0, Math.round(box.getYsize() * 100) / 100.0,
+                Math.round(box.getZsize() * 100) / 100.0,
+                Math.round((display.getY() - interaction.getY()) * 100) / 100.0);
     }
 
     private static void maybeAnnounce(Minecraft client, Entity display, long now) {
@@ -142,9 +198,11 @@ public final class GroundObjectHighlighter {
                     continue;
                 }
                 // Item displays have a near-zero bounding box, so pad it into something visible.
-                Gizmos
+                HighlightMarkers.add(entity.getBoundingBox().getCenter(), stroke, "");
+                var properties = Gizmos
                         .addGizmo(new EntityBoxGizmo(id, 0.4, 0.0, style))
                         .persistForMillis(GIZMO_LIFETIME_MILLIS);
+                Shaders.place(properties, config.groundObjectThroughWalls && !Edition.PUBLIC);
             }
         } catch (IllegalStateException e) {
             ShinyHunterClient.LOGGER.debug("Can't emit ground object highlights", e);

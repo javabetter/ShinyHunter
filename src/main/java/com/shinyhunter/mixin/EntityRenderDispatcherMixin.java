@@ -24,5 +24,9 @@ public class EntityRenderDispatcherMixin {
         if (entity instanceof Painting && PaintingHider.active()) {
             cir.setReturnValue(false);
         }
+        // Stand-in floor drop items draw at the prediction range, not just an item's few blocks.
+        if (com.shinyhunter.FloorDropView.isFake(entity.getId())) {
+            cir.setReturnValue(true);
+        }
     }
 }

@@ -22,6 +22,11 @@ public class EntityRendererMixin {
             at = @At("TAIL"))
     private void shinyhunter$stampTint(Entity entity, EntityRenderState state, float partialTick, CallbackInfo ci) {
         ((TintHolder) state).shinyhunter$setTint(EntityHighlighter.tintFor(entity.getId()));
+        // A predicted floor drop's stand-in item glows in its drop type's colour.
+        int dropOutline = com.shinyhunter.FloorDropView.outlineFor(entity.getId());
+        if (dropOutline != 0) {
+            state.outlineColor = dropOutline;
+        }
         // A nametag filled in here is one the game is about to draw on screen this frame.
         if (state.nameTag != null) {
             Sight.markNametagDrawn(entity.getId());

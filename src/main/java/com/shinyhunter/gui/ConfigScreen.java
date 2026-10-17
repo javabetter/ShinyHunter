@@ -1,5 +1,6 @@
 package com.shinyhunter.gui;
 
+import com.shinyhunter.Edition;
 import com.shinyhunter.ShinyConfig;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
@@ -182,6 +183,9 @@ public class ConfigScreen extends Screen {
     private void buildRows() {
         ShinyConfig c = ShinyConfig.get();
 
+        if (!Edition.PUBLIC) {
+            partyModeButton(c); // the public edition keeps location call-outs local, always
+        }
 
         section("Detection");
         bool("Enabled", "Master switch for shiny hunting.", () -> c.enabled, v -> c.enabled = v);
@@ -195,6 +199,14 @@ public class ConfigScreen extends Screen {
                 () -> c.waypointColor, v -> c.waypointColor = v);
         text("Hunt area", "Area keywords are confined to unless set to hunt everywhere.",
                 () -> c.huntLocation, v -> c.huntLocation = v);
+        if (!Edition.PUBLIC) {
+            bool("Deep data scan", "Also search item data and NBT, not just nameplates.",
+                    () -> c.scanEntityData, v -> c.scanEntityData = v);
+        }
+        if (!Edition.PUBLIC) {
+            number("Deep rescan (s)", "How long a deep scan result is reused per entity.",
+                    () -> c.deepScanSeconds, v -> c.deepScanSeconds = v, 1, 60);
+        }
         number("Re-alert after (s)", "Silence before the same entity alerts again.",
                 () -> c.renotifySeconds, v -> c.renotifySeconds = v, 1, 600);
 
@@ -210,6 +222,10 @@ public class ConfigScreen extends Screen {
         bool("Sound", "Play a sound on a find.", () -> c.playSound, v -> c.playSound = v);
         bool("Action bar", "Show finds on the action bar too.",
                 () -> c.actionBar, v -> c.actionBar = v);
+        if (!Edition.PUBLIC) {
+            bool("Glow matches", "Add a glow outline to matched entities.",
+                    () -> c.glowMatches, v -> c.glowMatches = v);
+        }
 
         section("Hotspots");
         bool("Relay hotspot", "Announce your hunting hotspot to chat.",
@@ -266,6 +282,92 @@ public class ConfigScreen extends Screen {
                 () -> c.floorDropClusterSize, v -> c.floorDropClusterSize = v, 1, 16);
         text("Colour (hex)", "Drop outline colour.",
                 () -> c.floorDropColor, v -> c.floorDropColor = v);
+        if (!Edition.PUBLIC) {
+            bool("Through walls", "Draw drop outlines through terrain.",
+                    () -> c.floorDropThroughWalls, v -> c.floorDropThroughWalls = v);
+            bool("Log drops", "Log each drop's item_display ids and what it gave, per run (shinyhunter-floor-drops.json).",
+                    () -> c.floorDropLog, v -> c.floorDropLog = v);
+            bool("Log drops in chat", "Also say each logged drop in chat.",
+                    () -> c.floorDropLogChat, v -> c.floorDropLogChat = v);
+            bool("Predict drops", "Label each drop with what it will give, from the run's spawn order (needs Log drops).",
+                    () -> c.floorDropPredict, v -> c.floorDropPredict = v);
+            decimal("Label size", "Size of the predicted drop labels.",
+                    () -> c.floorDropLabelScale, v -> c.floorDropLabelScale = v, 0.3, 4.0);
+            text("Label colour", "\"type\" for each drop type's colour, or a hex colour for every label.",
+                    () -> c.floorDropLabelColour, v -> c.floorDropLabelColour = v);
+            bool("Drop boxes", "Box each predicted drop, in its label's colour.",
+                    () -> c.floorDropBoxes, v -> c.floorDropBoxes = v);
+            bool("Stand-in items", "Show a dropped item on each predicted drop.",
+                    () -> c.floorDropFakeItems, v -> c.floorDropFakeItems = v);
+            bool("Outline stand-ins", "Outline the stand-in items in their drop type's colour.",
+                    () -> c.floorDropFakeOutline, v -> c.floorDropFakeOutline = v);
+            number("Prediction range", "Show predicted drops this far away, in blocks.",
+                    () -> c.floorDropRange, v -> c.floorDropRange = v, 8, 256);
+            bool("Only my biome", "Only show predicted drops in the biome you're in.",
+                    () -> c.floorDropOnlyMyBiome, v -> c.floorDropOnlyMyBiome = v);
+        }
+
+        if (!Edition.PUBLIC) {
+            section("Floor drop types");
+            bool("Lime Gem", "Show predicted Lime Gem drops.",
+                    () -> c.fdLimeShow, v -> c.fdLimeShow = v);
+            text("Lime Gem colour", "Highlight colour for Lime Gem drops (hex).",
+                    () -> c.fdLimeColour, v -> c.fdLimeColour = v);
+            number("Lime Gem hide after", "Hide the rest after picking up this many in a run (0 = never).",
+                    () -> c.fdLimeHideAfter, v -> c.fdLimeHideAfter = v, 0, 20);
+            bool("Purple Gem", "Show predicted Purple Gem drops.",
+                    () -> c.fdPurpleShow, v -> c.fdPurpleShow = v);
+            text("Purple Gem colour", "Highlight colour for Purple Gem drops (hex).",
+                    () -> c.fdPurpleColour, v -> c.fdPurpleColour = v);
+            number("Purple Gem hide after", "Hide the rest after picking up this many in a run (0 = never).",
+                    () -> c.fdPurpleHideAfter, v -> c.fdPurpleHideAfter = v, 0, 20);
+            bool("Orange Gem", "Show predicted Orange Gem drops.",
+                    () -> c.fdOrangeShow, v -> c.fdOrangeShow = v);
+            text("Orange Gem colour", "Highlight colour for Orange Gem drops (hex).",
+                    () -> c.fdOrangeColour, v -> c.fdOrangeColour = v);
+            number("Orange Gem hide after", "Hide the rest after picking up this many in a run (0 = never).",
+                    () -> c.fdOrangeHideAfter, v -> c.fdOrangeHideAfter = v, 0, 20);
+            bool("Wriggleworm", "Show predicted Wriggleworm drops.",
+                    () -> c.fdWormShow, v -> c.fdWormShow = v);
+            text("Wriggleworm colour", "Highlight colour for Wriggleworm drops (hex).",
+                    () -> c.fdWormColour, v -> c.fdWormColour = v);
+            number("Wriggleworm hide after", "Hide the rest after picking up this many in a run (0 = never).",
+                    () -> c.fdWormHideAfter, v -> c.fdWormHideAfter = v, 0, 20);
+            bool("Yogi Berry", "Show predicted Yogi Berry drops.",
+                    () -> c.fdBerryShow, v -> c.fdBerryShow = v);
+            text("Yogi Berry colour", "Highlight colour for Yogi Berry drops (hex).",
+                    () -> c.fdBerryColour, v -> c.fdBerryColour = v);
+            number("Yogi Berry hide after", "Hide the rest after picking up this many in a run (0 = never).",
+                    () -> c.fdBerryHideAfter, v -> c.fdBerryHideAfter = v, 0, 20);
+            bool("Bag of Seeds", "Show predicted Bag of Seeds drops.",
+                    () -> c.fdSeedsShow, v -> c.fdSeedsShow = v);
+            text("Bag of Seeds colour", "Highlight colour for Bag of Seeds drops (hex).",
+                    () -> c.fdSeedsColour, v -> c.fdSeedsColour = v);
+            number("Bag of Seeds hide after", "Hide the rest after picking up this many in a run (0 = never).",
+                    () -> c.fdSeedsHideAfter, v -> c.fdSeedsHideAfter = v, 0, 20);
+            bool("Soothing Incense", "Show predicted Soothing Incense drops.",
+                    () -> c.fdIncenseShow, v -> c.fdIncenseShow = v);
+            text("Soothing Incense colour", "Highlight colour for Soothing Incense drops (hex).",
+                    () -> c.fdIncenseColour, v -> c.fdIncenseColour = v);
+            number("Soothing Incense hide after", "Hide the rest after picking up this many in a run (0 = never).",
+                    () -> c.fdIncenseHideAfter, v -> c.fdIncenseHideAfter = v, 0, 20);
+            bool("Shining Coin", "Show predicted Shining Coin drops.",
+                    () -> c.fdCoinShow, v -> c.fdCoinShow = v);
+            text("Shining Coin colour", "Highlight colour for Shining Coin drops (hex).",
+                    () -> c.fdCoinColour, v -> c.fdCoinColour = v);
+            number("Shining Coin hide after", "Hide the rest after picking up this many in a run (0 = never).",
+                    () -> c.fdCoinHideAfter, v -> c.fdCoinHideAfter = v, 0, 20);
+            bool("Icebreaker", "Show predicted Icebreaker drops.",
+                    () -> c.fdIcebreakerShow, v -> c.fdIcebreakerShow = v);
+            text("Icebreaker colour", "Highlight colour for Icebreaker drops (hex).",
+                    () -> c.fdIcebreakerColour, v -> c.fdIcebreakerColour = v);
+            number("Icebreaker hide after", "Hide the rest after picking up this many in a run (0 = never).",
+                    () -> c.fdIcebreakerHideAfter, v -> c.fdIcebreakerHideAfter = v, 0, 20);
+            bool("Random drops", "Show predicted random drops (XP, Essence or a shard).",
+                    () -> c.fdRandomShow, v -> c.fdRandomShow = v);
+            text("Random drops colour", "Highlight colour for random drops (hex).",
+                    () -> c.fdRandomColour, v -> c.fdRandomColour = v);
+        }
 
         section("Party coordination");
         bool("!dt command", "Handle !dt [reason] in party chat: hold the Safari Manager after the run.",
@@ -335,6 +437,11 @@ public class ConfigScreen extends Screen {
                 () -> c.sharedCommand, v -> c.sharedCommand = v);
         bool("Skip shared", "Leave sparklings the whole party has off the missing list and HUD.",
                 () -> c.partyDexSkipShared, v -> c.partyDexSkipShared = v);
+        if (!Edition.PUBLIC) {
+            // The public edition gets player data through the Shiny Hunter API and has no key.
+            text("Hypixel API key", "Your developer key from developer.hypixel.net. Never logged.",
+                    () -> c.hypixelApiKey, v -> c.hypixelApiKey = v);
+        }
         text("Dex path", "Profile path to the Sparkling Critterdex, once known. Blank = discover.",
                 () -> c.sparklingDexPath, v -> c.sparklingDexPath = v);
         number("!shared max", "Most sparklings !shared lists before \"+N more\".",
@@ -373,6 +480,10 @@ public class ConfigScreen extends Screen {
                 () -> c.snoozlingWallWaypoints, v -> c.snoozlingWallWaypoints = v);
         text("Wall waypoint colour", "Hex colour, e.g. FF55FF.",
                 () -> c.snoozlingWallColor, v -> c.snoozlingWallColor = v);
+        if (!Edition.PUBLIC) {
+            bool("Track walls", "Show how many Snoozling walls have been broken.",
+                    () -> c.trackSnoozlingWalls, v -> c.trackSnoozlingWalls = v);
+        }
 
         section("Safari Join Assist");
         text("Your role", "none / joiner (enters the Safari, then warps the party) / inviter (invites them back, gives leader).",
@@ -418,6 +529,18 @@ public class ConfigScreen extends Screen {
                 () -> c.ticketItemName, v -> c.ticketItemName = v);
         number("Presence radius", "How close a player must be to count as here.",
                 () -> c.presenceRadius, v -> c.presenceRadius = v, 2, 64);
+        if (!Edition.PUBLIC) {
+            bool("!hidey command", "Answer !hidey / !hideyho with plain coordinates.",
+                    () -> c.hideyhoCommand, v -> c.hideyhoCommand = v);
+        }
+        if (!Edition.PUBLIC) {
+            bool("Hidey slash commands", "Enable /sharehidey, /shide and /hide.",
+                    () -> c.hideyhoSlashCommands, v -> c.hideyhoSlashCommands = v);
+        }
+        if (!Edition.PUBLIC) {
+            bool("Hidey inside/outside", "Title \"Hideyho inside!\" or \"outside!\" once it hides after the quest.",
+                    () -> c.hideyhoInsideOutside, v -> c.hideyhoInsideOutside = v);
+        }
         bool("Instant party chat", "Send right away when nothing has been sent recently.",
                 () -> c.instantPartyChat, v -> c.instantPartyChat = v);
         bool("Announce gems", "Say \"X Gem placed!\" when you place one.",
@@ -443,6 +566,10 @@ public class ConfigScreen extends Screen {
                 () -> c.critterChannel, v -> c.critterChannel = v);
 
         section("HUD");
+        if (!Edition.PUBLIC) {
+            text("Shader markers", "On-screen dots for highlights when shaders hide them: auto / always / never.",
+                    () -> c.shaderMarkers, v -> c.shaderMarkers = v);
+        }
         bool("Show HUD", "Draw the HUD panels on screen.",
                 () -> c.showHud, v -> c.showHud = v);
         number("HUD x", "Distance from the left edge, in pixels.",
@@ -457,6 +584,10 @@ public class ConfigScreen extends Screen {
                 () -> c.groundObjectColor, v -> c.groundObjectColor = v);
         number("Search radius", "How far to look for ground objects, in blocks.",
                 () -> c.groundObjectScanRadius, v -> c.groundObjectScanRadius = v, 8, 128);
+        if (!Edition.PUBLIC) {
+            bool("Through walls", "Draw ground object outlines through terrain.",
+                    () -> c.groundObjectThroughWalls, v -> c.groundObjectThroughWalls = v);
+        }
         bool("Announce coords", "Print coordinates in chat when one is spotted.",
                 () -> c.groundObjectAnnounce, v -> c.groundObjectAnnounce = v);
 
@@ -491,6 +622,10 @@ public class ConfigScreen extends Screen {
                 () -> c.highlightBoxMinSize, v -> c.highlightBoxMinSize = v, 0.0, 3.0);
         bool("Tint mobs", "Colour outlined mobs toward their outline colour.",
                 () -> c.highlightTintMobs, v -> c.highlightTintMobs = v);
+        if (!Edition.PUBLIC) {
+            bool("Through walls", "Draw entity outlines through terrain.",
+                    () -> c.highlightThroughWalls, v -> c.highlightThroughWalls = v);
+        }
         bool("Ignore capture UI", "Don't treat the capsule's CAPTURING display as a mob.",
                 () -> c.highlightIgnoreCapturing, v -> c.highlightIgnoreCapturing = v);
         bool("Match NBT too", "Also match item/NBT data for unnamed things like rocks.",
@@ -509,6 +644,24 @@ public class ConfigScreen extends Screen {
             buildStringListRows(c.sparklingParticles, "particle", "minecraft:end_rod");
         }
 
+        if (!Edition.PUBLIC) {
+            section("Sparkling textures");
+        }
+        if (!Edition.PUBLIC) {
+            bool("Texture detection", "Treat a sparkling-only skin texture as a sparkling.",
+                    () -> c.textureDetection, v -> c.textureDetection = v);
+        }
+        if (!Edition.PUBLIC && sectionMatches("Sparkling textures")) {
+            buildStringListRows(c.sparklingTextures, "texture hash", "");
+        }
+
+        // The public scanner hunts SPARKLING only, so the keyword list would be a dead switch there.
+        if (!Edition.PUBLIC) {
+            section("Hunt keywords");
+        }
+        if (!Edition.PUBLIC && sectionMatches("Hunt keywords")) {
+            buildKeywordRows(c);
+        }
 
         section("Tracked entities");
         if (sectionMatches("Tracked entities")) {
@@ -520,6 +673,10 @@ public class ConfigScreen extends Screen {
                 () -> c.highlightBlocks, v -> c.highlightBlocks = v);
         number("Search radius", "How far to look for tracked blocks, in blocks.",
                 () -> c.blockScanRadius, v -> c.blockScanRadius = v, 8, 256);
+        if (!Edition.PUBLIC) {
+            bool("Through walls", "Draw block outlines through terrain.",
+                    () -> c.blockThroughWalls, v -> c.blockThroughWalls = v);
+        }
         if (sectionMatches("Tracked blocks")) {
             buildBlockRows(c);
         }
@@ -751,6 +908,69 @@ public class ConfigScreen extends Screen {
         contentHeight += ROW_HEIGHT + 4;
     }
 
+    private void buildKeywordRows(ShinyConfig c) {
+        if (cataloguing()) {
+            return; // list editors have no single label to catalogue
+        }
+        flushSection();
+        int labelX = width / 2 - PANEL_WIDTH / 2 + 8;
+
+        for (ShinyConfig.Keyword keyword : c.huntKeywords) {
+            int y = contentHeight;
+
+            EditBox box = new EditBox(font, labelX, 0, 240, 18, Component.literal("Keyword"));
+            box.setValue(keyword.token == null ? "" : keyword.token);
+            box.setMaxLength(64);
+            // Captures the keyword itself, not its index, so edits elsewhere in the list can't
+            // make this write to the wrong entry.
+            box.setResponder(v -> {
+                keyword.token = v;
+                ShinyConfig.get().save();
+            });
+            rows.add(new Row(null, null, box, y, false));
+
+            Button scope = Button.builder(
+                            Component.literal(keyword.huntOutsideSafari ? "Everywhere" : "Safari only"),
+                            b -> {
+                                keyword.huntOutsideSafari = !keyword.huntOutsideSafari;
+                                b.setMessage(Component.literal(
+                                        keyword.huntOutsideSafari ? "Everywhere" : "Safari only"));
+                                ShinyConfig.get().save();
+                            })
+                    .bounds(labelX + 246, 0, 84, 18).build();
+            scope.setTooltip(Tooltip.create(Component.literal(
+                    "Whether this keyword keeps hunting outside the hunt area")));
+            rows.add(new Row(null, null, scope, y, false));
+
+            Button remove = Button.builder(Component.literal("x"), b -> {
+                        ShinyConfig config = ShinyConfig.get();
+                        config.huntKeywords.remove(keyword);
+                        config.save();
+                        rebuild();
+                    })
+                    .bounds(labelX + 336, 0, 20, 18).build();
+            remove.setTooltip(Tooltip.create(Component.literal("Stop hunting this keyword")));
+            rows.add(new Row(null, null, remove, y, false));
+
+            contentHeight += ROW_HEIGHT;
+        }
+
+        if (c.huntKeywords.isEmpty()) {
+            rows.add(new Row("Nothing is being hunted", null, null, contentHeight, false));
+            contentHeight += ROW_HEIGHT;
+        }
+
+        Button add = Button.builder(Component.literal("+  Add keyword"), b -> {
+                    ShinyConfig config = ShinyConfig.get();
+                    config.huntKeywords.add(new ShinyConfig.Keyword("SPARKLING"));
+                    config.save();
+                    rebuild();
+                })
+                .bounds(labelX, 0, 200, 20).build();
+        rows.add(new Row(null, null, add, contentHeight, false));
+        contentHeight += ROW_HEIGHT + 4;
+    }
+
     /**
      * Tracked entities, bundled under their group with a switch that flips the whole group at once.
      *
@@ -926,6 +1146,35 @@ public class ConfigScreen extends Screen {
      * The party privacy switch, first thing on the screen because it changes what leaves your client
      * and is the one setting worth checking before joining strangers.
      */
+    private void partyModeButton(ShinyConfig c) {
+        if (cataloguing()) {
+            return; // list editors have no single label to catalogue
+        }
+        if (!searchTerm.isEmpty()) {
+            return; // the mode switch isn't a searchable setting
+        }
+        int x = width / 2 - PANEL_WIDTH / 2 + 8;
+        Button button = Button.builder(partyModeLabel(c), b -> {
+            ShinyConfig config = ShinyConfig.get();
+            config.publicParty = !config.publicParty;
+            b.setMessage(partyModeLabel(config));
+            config.save();
+        }).bounds(x, 0, PANEL_WIDTH - 16, 20).build();
+        button.setTooltip(Tooltip.create(Component.literal(
+                "Private Party: everything enabled is sent to party chat.\n"
+                        + "Public Party: anything revealing a location — emptied bee nests, shard "
+                        + "trade call-outs — is shown only to you instead.\n"
+                        + "Readiness, timers and bird food are sent either way.")));
+        rows.add(new Row(null, null, button, contentHeight, false));
+        contentHeight += ROW_HEIGHT + 4;
+    }
+
+    private static Component partyModeLabel(ShinyConfig c) {
+        return Component.literal(c.publicParty
+                ? "§e§lPublic Party §r§7— location call-outs kept private"
+                : "§a§lPrivate Party §r§7— everything shared with the party");
+    }
+
     private void section(String title) {
         pendingSection = title;
         currentSection = title;

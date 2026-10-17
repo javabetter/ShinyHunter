@@ -83,6 +83,7 @@ public final class RunTracker {
         ShardTradeWatcher.clearOffers();
         SplitTracker.reset();
         RockmiteTracker.reset();
+        SnoozlingTracker.reset();
         // resetRun, not reset: a ticket paid at the entrance hops you here, and the countdown has
         // to survive that hop.
         SafariTimer.resetRun();
@@ -94,6 +95,8 @@ public final class RunTracker {
     private static void endRun(String why) {
         long duration = runStartedAt == 0 ? 0 : System.currentTimeMillis() - runStartedAt;
         runStartedAt = 0;
+        HideyhoLocator.reset();
+        HideyhoSpotter.reset();
         SafariGuard.clearKickHold();
 
         // Before the clock is reset: the bests are read off this run's splits, and which of them

@@ -166,9 +166,13 @@ public final class BlockHighlighter {
         try {
             for (Found found : FOUND) {
                 int fill = (found.color() & 0x00FFFFFF) | 0x33000000;
-                Gizmos
+                HighlightMarkers.add(new net.minecraft.world.phys.Vec3(
+                        found.pos().getX() + 0.5, found.pos().getY() + 0.5, found.pos().getZ() + 0.5),
+                        found.color(), "");
+                var properties = Gizmos
                         .cuboid(found.pos(), GizmoStyle.strokeAndFill(found.color(), 2.0f, fill))
                         .persistForMillis(GIZMO_LIFETIME_MILLIS);
+                Shaders.place(properties, config.blockThroughWalls && !Edition.PUBLIC);
             }
         } catch (IllegalStateException e) {
             ShinyHunterClient.LOGGER.debug("Can't emit block highlights", e);

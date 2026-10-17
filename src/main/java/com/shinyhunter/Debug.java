@@ -4,8 +4,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 
 /**
- * Verbose tracing, printed to chat as well as the log. There's no command for it in release builds;
- * a developer switches it on with {@link #setEnabled} while working on the mod.
+ * Verbose tracing, printed to chat as well as the log, toggled with {@code /shinyhunter debug on}.
  *
  * <p>Exists because the features that go wrong here go wrong <em>during</em> a run — a split that
  * doesn't commit, a catch that isn't credited — and by the time the run is over the state that would

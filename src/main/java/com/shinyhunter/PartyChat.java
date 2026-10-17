@@ -62,7 +62,7 @@ public final class PartyChat {
         if (command.isEmpty()) {
             command = "pc";
         }
-        if (containsCoordinates(message)) {
+        if ((Edition.PUBLIC || ShinyConfig.get().publicParty) && containsCoordinates(message)) {
             keepPrivate(message);
             return;
         }
@@ -107,19 +107,31 @@ public final class PartyChat {
     private static final Pattern CODE = Pattern.compile("\\b[A-Z]{10}\\b");
 
     /**
-     * A message that gives away a location, or anything else not for strangers: shown only to you,
-     * never sent. The party still gets everything harmless — readiness, timers, bird food — so
-     * coordinating with strangers keeps working while your finds stay yours.
+     * Queues a message that gives away a location, or anything else not for strangers.
+     *
+     * <p>In a public party these are kept back and shown only to you. The party still gets
+     * everything harmless — readiness, timers, bird food — so coordinating with strangers keeps
+     * working while your finds stay yours.
      */
     public static void sendSensitive(String channel, String message) {
-        keepPrivate(message);
+        if (Edition.PUBLIC || ShinyConfig.get().publicParty) {
+            keepPrivate(message);
+            return;
+        }
+        send(channel, message);
     }
 
-    /** Shows a withheld message to the player instead of the party. */
+    /**
+     * Shows a withheld message to the player instead of the party. The public edition has no
+     * party-privacy switch — location call-outs simply go to your own chat — so it doesn't
+     * explain itself the way the private one does.
+     */
     private static void keepPrivate(String message) {
         Minecraft client = Minecraft.getInstance();
         if (client.player != null) {
-            client.player.sendSystemMessage(Component.literal("§b[Shiny Hunter] §r" + message));
+            client.player.sendSystemMessage(Component.literal(Edition.PUBLIC
+                    ? "§b[Shiny Hunter] §r" + message
+                    : "§b[Shiny Hunter] §8(public party — kept private)§r " + message));
         }
         ShinyHunterClient.LOGGER.info("Kept local: {}", message);
     }

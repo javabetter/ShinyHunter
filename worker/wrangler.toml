@@ -1,0 +1,10 @@
+name = "shinyhunter-api"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+# Free *.workers.dev address. No routes or custom domain needed.
+workers_dev = true
+
+# Secrets are NOT set here. Set them once with:
+#   npx wrangler secret put HYPIXEL_KEY
+#   npx wrangler secret put TOKEN_SECRET

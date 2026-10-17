@@ -387,8 +387,9 @@ public final class HoneyHives {
         AABB shaft = new AABB(
                 nest.x + 0.35, nest.y + 1.0, nest.z + 0.35,
                 nest.x + 0.65, nest.y + 1.0 + Math.min(config.honeyHiveBeamHeight, 64), nest.z + 0.65);
-        Gizmos.cuboid(shaft, GizmoStyle.strokeAndFill(colour, 1.0f, fill))
+        var beam = Gizmos.cuboid(shaft, GizmoStyle.strokeAndFill(colour, 1.0f, fill))
                 .persistForMillis(GIZMO_LIFETIME_MILLIS);
+        Shaders.place(beam, config.honeyHiveThroughWalls && !Edition.PUBLIC);
     }
 
     /** The box around the hive block itself. The beam above it is a real beacon beam. */

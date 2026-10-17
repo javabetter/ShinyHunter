@@ -10,16 +10,22 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Where the five Snoozling walls are, and whether each is still standing.
+ * Counts how many of the five Snoozling walls have been broken this run.
  *
  * <p>The walls sit at fixed coordinates in every Safari instance, so they're read straight out of
  * the world rather than tracked through chat: a wall still standing is cobbled deepslate or tuff,
- * and a broken one is air.
+ * and a broken one is air. Reading the block is the ground truth — it survives relogging, it's right
+ * when a teammate breaks one out of sight, and it needs no message to have been seen.
  *
- * <p><b>Unloaded is not broken.</b> An unloaded chunk reads as air, so a wall is only called broken
- * once its chunk is actually loaded; until then its state is unknown.
+ * <p><b>Unloaded is not broken.</b> The walls are spread far enough apart that several are outside
+ * the loaded chunks most of the time, and an unloaded chunk reads as air. Counting that as broken
+ * would show 5/5 from the far side of the map. So each wall is only counted once its chunk is
+ * actually loaded, and the panel says how many are still unseen rather than quietly guessing.
  */
 public final class SnoozlingTracker {
+
+    /** Only worth re-reading occasionally; block reads are cheap but this runs every tick. */
+    private static final int RESCAN_INTERVAL_TICKS = 20;
 
     /** What one wall is currently known to be. */
     public enum State {
@@ -31,7 +37,47 @@ public final class SnoozlingTracker {
         UNKNOWN
     }
 
+    private static int tickCounter;
+
+    /**
+     * Each wall's state, in the order they're configured. Kept per wall rather than as a tally so
+     * the checklist can say <em>which</em> ones are open, which is what tells you where to go.
+     */
+    private static State[] states = new State[0];
+
     private SnoozlingTracker() {
+    }
+
+    public static void onClientTick(Minecraft client) {
+        ShinyConfig config = ShinyConfig.get();
+        if (!config.trackSnoozlingWalls
+                || client.level == null
+                || client.player == null
+                || !SkyblockSidebar.isAtLocation(client, config.huntLocation)) {
+            reset();
+            return;
+        }
+
+        if (++tickCounter < RESCAN_INTERVAL_TICKS) {
+            return;
+        }
+        tickCounter = 0;
+        rescan(client, config);
+    }
+
+    private static void rescan(Minecraft client, ShinyConfig config) {
+        List<BlockPos> walls = walls(config);
+        State[] next = new State[walls.size()];
+        int previousBroken = broken();
+
+        for (int i = 0; i < walls.size(); i++) {
+            next[i] = stateOf(client, walls.get(i));
+        }
+
+        states = next;
+        if (broken() != previousBroken) {
+            Debug.log("snoozling walls:", checklist(), "-", broken() + "/" + walls.size(), "open");
+        }
     }
 
     /** What the wall at this position is right now, read from the loaded world. */
@@ -73,7 +119,7 @@ public final class SnoozlingTracker {
         if (entry == null) {
             return null;
         }
-        String[] parts = entry.trim().replace(",", " ").split("\s+");
+        String[] parts = entry.trim().replace(",", " ").split("\\s+");
         if (parts.length != 3) {
             return null;
         }
@@ -83,5 +129,63 @@ public final class SnoozlingTracker {
         } catch (NumberFormatException e) {
             return null;
         }
+    }
+
+    // ------------------------------------------------------------------ state
+
+    public static int broken() {
+        return count(State.BROKEN);
+    }
+
+    public static int unknown() {
+        return count(State.UNKNOWN);
+    }
+
+    public static int standing() {
+        return count(State.STANDING);
+    }
+
+    private static int count(State wanted) {
+        int found = 0;
+        for (State state : states) {
+            if (state == wanted) {
+                found++;
+            }
+        }
+        return found;
+    }
+
+    public static int total() {
+        return walls(ShinyConfig.get()).size();
+    }
+
+    /**
+     * The walls as a left-to-right checklist in configured order — {@code "- | ✔ | - | - | -"}.
+     * A wall whose chunk isn't loaded shows as {@code ?}, so an unread wall is never mistaken for
+     * one still standing.
+     */
+    public static String checklist() {
+        int total = total();
+        if (total == 0) {
+            return "";
+        }
+        StringBuilder out = new StringBuilder();
+        for (int i = 0; i < total; i++) {
+            if (i > 0) {
+                out.append(" §7| ");
+            }
+            State state = i < states.length ? states[i] : State.UNKNOWN;
+            out.append(switch (state) {
+                case BROKEN -> "§a✔";
+                case STANDING -> "§7-";
+                case UNKNOWN -> "§8?";
+            });
+        }
+        return out.toString();
+    }
+
+    public static void reset() {
+        states = new State[0];
+        tickCounter = RESCAN_INTERVAL_TICKS; // read immediately next time it's active
     }
 }

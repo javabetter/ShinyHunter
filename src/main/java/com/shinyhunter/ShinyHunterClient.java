@@ -32,8 +32,8 @@ public class ShinyHunterClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
-        // First, so the highlighters below refill it: they record fixed markers here for the
-        // shader-safe HUD overlay, which needs last tick's list gone before they start.
+        // First, so the highlighters below refill it: they record what they draw here for the
+        // shader-safe overlay, which needs last tick's list gone before they start.
         ClientTickEvents.END_CLIENT_TICK.register(client -> HighlightMarkers.beginTick());
         ClientTickEvents.END_CLIENT_TICK.register(ShinyScanner::onClientTick);
         ClientTickEvents.END_CLIENT_TICK.register(PaintingHider::onClientTick);
@@ -50,10 +50,21 @@ public class ShinyHunterClient implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(BlockHighlighter::onClientTick);
         ClientTickEvents.END_CLIENT_TICK.register(EntityHighlighter::onClientTick);
         ClientTickEvents.END_CLIENT_TICK.register(FloorDropHighlighter::onClientTick);
+        if (!Edition.PUBLIC) {
+            ClientTickEvents.END_CLIENT_TICK.register(FloorDropLog::onClientTick);
+            ClientTickEvents.END_CLIENT_TICK.register(FloorDropView::onClientTick);
+        }
         ClientTickEvents.END_CLIENT_TICK.register(GroundObjectHighlighter::onClientTick);
         ClientTickEvents.END_CLIENT_TICK.register(WaypointManager::onClientTick);
         ClientTickEvents.END_CLIENT_TICK.register(SnoozlingWallMarkers::onClientTick);
         ClientTickEvents.END_CLIENT_TICK.register(CritterTracker::onClientTick);
+        if (!Edition.PUBLIC) {
+            // Hideyho's position and the wall tracker read things the player can't see from where
+            // they stand; the public edition ships without them.
+            ClientTickEvents.END_CLIENT_TICK.register(HideyhoLocator::onClientTick);
+            ClientTickEvents.END_CLIENT_TICK.register(HideyhoSpotter::onClientTick);
+            ClientTickEvents.END_CLIENT_TICK.register(SnoozlingTracker::onClientTick);
+        }
         ClientTickEvents.END_CLIENT_TICK.register(WardenWatcher::onClientTick);
 
         ClientTickEvents.END_CLIENT_TICK.register(HotspotCoordinator::onClientTick);
@@ -89,16 +100,31 @@ public class ShinyHunterClient implements ClientModInitializer {
         RockmiteTracker.register();
         PartyChat.register();
         PartyDex.register();
-        // Honeyhives: loot tracking from chat, and real beacon beams (ordinary
+        // Honeyhives are in both editions: loot tracking from chat, and real beacon beams (ordinary
         // world rendering, hidden by terrain like any other block).
         HoneyHives.register();
         HiveBeacons.register();
+        if (!Edition.PUBLIC) {
+            FloorDropLog.register(); // which item_display group each floor drop was, per run
+            GroundObjectHighlighter.register(); // logs what a found Duplico was, to tell it from rocks
+            HideyhoLocator.register();
+            HideyhoSpotter.register();
+        }
         HudOverlay.register();
         ShaderMarkerOverlay.register();
 
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
             dispatcher.register(buildCommand(literal("shinyhunter")));
             dispatcher.register(buildCommand(literal("shiny")));
+
+            // Typed alternatives to "!hidey" in party chat. Registered unconditionally — commands
+            // can't be added or removed once the dispatcher is built — and gated on the setting
+            // when run, so switching them off in the config takes effect immediately.
+            if (!Edition.PUBLIC) {
+                for (String alias : new String[]{"sharehidey", "shide", "hide"}) {
+                    dispatcher.register(literal(alias).executes(ShinyHunterClient::shareHideyho));
+                }
+            }
 
             // "/sparkling Name" is "/shiny dex Name"; "/sparkling A B C" compares them.
             dispatcher.register(literal("sparkling")
@@ -152,6 +178,13 @@ public class ShinyHunterClient implements ClientModInitializer {
      */
     private static LiteralArgumentBuilder<FabricClientCommandSource> buildCommand(
             LiteralArgumentBuilder<FabricClientCommandSource> root) {
+        if (!Edition.PUBLIC) {
+            // Debug tracing is a development tool; the public release ships without it.
+            root.then(literal("debug")
+                    .then(literal("on").executes(c -> setDebug(c, true)))
+                    .then(literal("off").executes(c -> setDebug(c, false)))
+                    .executes(c -> setDebug(c, !Debug.isEnabled())));
+        }
         return root
                 .executes(ShinyHunterClient::openConfig)
                 .then(literal("waypoints").executes(ShinyHunterClient::clearWaypoints))
@@ -175,6 +208,12 @@ public class ShinyHunterClient implements ClientModInitializer {
                         .then(literal("fullclear").executes(c -> showMode(c, SafariMode.select(SafariMode.FULL_CLEAR))))
                         .then(literal("sparkling").executes(c -> showMode(c, SafariMode.select(SafariMode.SPARKLING)))))
                 .then(literal("who").executes(ShinyHunterClient::listPresent))
+                .then(literal("floordrops").executes(c -> {
+                    for (String line : FloorDropLog.status()) {
+                        c.getSource().sendFeedback(Component.literal(line));
+                    }
+                    return Command.SINGLE_SUCCESS;
+                }))
                 .then(literal("hives").executes(c -> {
                     for (String line : HoneyHives.status()) {
                         c.getSource().sendFeedback(Component.literal(line));
@@ -285,6 +324,32 @@ public class ShinyHunterClient implements ClientModInitializer {
         return Command.SINGLE_SUCCESS;
     }
 
+    /**
+     * Turns on verbose tracing. Bare {@code /shinyhunter debug} toggles, which is what gets typed
+     * when something has just gone wrong and nobody wants to think about the argument.
+     */
+    private static int setDebug(CommandContext<FabricClientCommandSource> context, boolean on) {
+        Debug.setEnabled(on);
+        if (on) {
+            feedback(context, "Debug tracing §aON§r. Catches, splits and best-time decisions "
+                    + "will be traced here. Run a Safari, then §f/shiny splits§r.");
+        } else {
+            feedback(context, "Debug tracing §coff§r.");
+        }
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private static int shareHideyho(CommandContext<FabricClientCommandSource> context) {
+        ShinyConfig config = ShinyConfig.get();
+        if (!config.hideyhoSlashCommands) {
+            return feedback(context, "§cHideyho commands are turned off in settings.");
+        }
+        if (!HideyhoLocator.share(config)) {
+            return feedback(context, "§cNo " + config.hideyhoName + " seen this run yet.");
+        }
+        return Command.SINGLE_SUCCESS;
+    }
+
     /** The current roster and skip list, without a lookup. */
     private static int showPartyDex(CommandContext<FabricClientCommandSource> context) {
         var members = PartyDex.members();
@@ -346,6 +411,11 @@ public class ShinyHunterClient implements ClientModInitializer {
                 {"/shiny hives", "which honeyhives are full, and what's known about each"},
                 {"/shiny zone", "the sidebar zone as the mod reads it"},
         };
+        if (!Edition.PUBLIC) {
+            slash = java.util.Arrays.copyOf(slash, slash.length + 2);
+            slash[slash.length - 2] = new String[] {"/sharehidey, /shide, /hide", "post Hideyho's position to the party"};
+            slash[slash.length - 1] = new String[] {"/shiny debug [on|off]", "trace catches, splits and bests to chat"};
+        }
         String[][] party = {
                 {"!dt [reason]", "downtime after this run: holds the manager until you say r"},
                 {"!timer <length>", "start a shared timer"},
@@ -354,6 +424,10 @@ public class ShinyHunterClient implements ClientModInitializer {
                 {"!shared / !shared all", "sparklings the whole party has"},
                 {"kick", "holds the Safari Manager shut"},
         };
+        if (!Edition.PUBLIC) {
+            party = java.util.Arrays.copyOf(party, party.length + 1);
+            party[party.length - 1] = new String[] {"!hidey", "Hideyho's position"};
+        }
         feedback(context, "§b§lCommands");
         for (String[] row : slash) {
             context.getSource().sendFeedback(Component.literal("  §f" + row[0] + " §8- §7" + row[1]));

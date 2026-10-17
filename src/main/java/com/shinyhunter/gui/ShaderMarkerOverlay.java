@@ -1,6 +1,7 @@
 package com.shinyhunter.gui;
 
 import com.shinyhunter.HighlightMarkers;
+import com.shinyhunter.ShinyConfig;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -24,8 +25,8 @@ import net.minecraft.world.phys.Vec3;
  * from the render pipeline, which is the whole point — the pipeline is what can't be trusted here.
  *
  * <p>Switched on automatically while a shader pack is in use ({@link com.shinyhunter.Shaders}),
- * since with no shader the real outlines are better in every way. Only fixed markers are drawn
- * here (see {@link HighlightMarkers.Marker#fixed}).
+ * since with no shader the real outlines are better in every way. The public edition draws only
+ * fixed markers here (see {@link HighlightMarkers.Marker#fixed}).
  */
 public final class ShaderMarkerOverlay {
 
@@ -43,14 +44,20 @@ public final class ShaderMarkerOverlay {
 
     private static void render(GuiGraphicsExtractor graphics) {
         Minecraft client = Minecraft.getInstance();
+        ShinyConfig config = ShinyConfig.get();
 
         if (client.player == null || client.options.hideGui || client.screen != null) {
             return;
         }
-        // Screen-space markers ignore occlusion by nature, so only the fixed ones are drawn —
-        // scenery at known coordinates that may show through walls anyway — and only while a
-        // shader pack is actually eating the through-wall outlines.
-        boolean wanted = com.shinyhunter.Shaders.active();
+        // Screen-space markers ignore occlusion by nature, so the public edition draws only the
+        // fixed ones — scenery at known coordinates that may show through walls anyway — and only
+        // while a shader pack is actually eating the through-wall outlines.
+        boolean publicEdition = com.shinyhunter.Edition.PUBLIC;
+        boolean wanted = publicEdition ? com.shinyhunter.Shaders.active() : switch (config.shaderMarkers) {
+            case "always" -> true;
+            case "never" -> false;
+            default -> com.shinyhunter.Shaders.active();
+        };
         if (!wanted || HighlightMarkers.all().isEmpty()) {
             return;
         }
@@ -71,7 +78,7 @@ public final class ShaderMarkerOverlay {
         double focal = (screenHeight / 2.0) / Math.tan(Math.toRadians(fov) / 2.0);
 
         for (HighlightMarkers.Marker marker : HighlightMarkers.all()) {
-            if (!marker.fixed()) {
+            if (publicEdition && !marker.fixed()) {
                 continue;
             }
             Vec3 offset = marker.pos().subtract(eye);

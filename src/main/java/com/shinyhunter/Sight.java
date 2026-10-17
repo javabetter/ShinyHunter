@@ -8,9 +8,12 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * What the player could actually see. Shiny Hunter only reacts to a name that's on your screen or
- * a mob in plain view: an entity behind you, out of range, or underground on its way up is off
- * limits even though the server has sent it.
+ * Line-of-sight tests for the public edition, which only reacts to what the player could actually
+ * see: an entity behind terrain, or underground on its way up, is off limits there even though the
+ * server has sent it.
+ *
+ * <p>The private edition never calls this — every caller is behind {@code !Edition.PUBLIC}, so the
+ * checks (and their raycasts) don't exist in that build.
  */
 public final class Sight {
 

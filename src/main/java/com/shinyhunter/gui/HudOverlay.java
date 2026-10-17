@@ -56,6 +56,9 @@ public final class HudOverlay {
         PANELS.add(new HudPanel("contest", "Miria's Contest", HudOverlay::contestLines));
         PANELS.add(new HudPanel("contest_claims", "Unclaimed contests", HudOverlay::claimLines));
         PANELS.add(new HudPanel("tickets", "Tickets since sparkling", HudOverlay::ticketLines));
+        if (!com.shinyhunter.Edition.PUBLIC) {
+            PANELS.add(new HudPanel("snoozling", "Snoozling walls", HudOverlay::snoozlingLines));
+        }
         PANELS.add(new HudPanel("rockmites", "Rockmites", HudOverlay::rockmiteLines));
         PANELS.add(new HudPanel("trades", "Shard trades", HudOverlay::tradeLines));
         for (String biome : CritterDex.biomes()) {
@@ -253,6 +256,29 @@ public final class HudOverlay {
                     ? "§7Next in §f" + ContestTracker.formatRemaining(ContestTracker.secondsToNextStart())
                     : "§7Ends in §f" + ContestTracker.formatRemaining(ContestTracker.secondsToEnd()));
         }
+        return lines;
+    }
+
+    private static List<String> snoozlingLines() {
+        List<String> lines = new ArrayList<>();
+        ShinyConfig config = ShinyConfig.get();
+        Minecraft client = Minecraft.getInstance();
+
+        if (!config.trackSnoozlingWalls
+                || !SkyblockSidebar.isAtLocation(client, config.huntLocation)) {
+            return lines;
+        }
+
+        int broken = SnoozlingTracker.broken();
+        int total = SnoozlingTracker.total();
+        int unknown = SnoozlingTracker.unknown();
+
+        String colour = broken >= total ? "§a" : "§e";
+        lines.add("§b§lSnoozling " + colour + broken + "§7/" + total
+                + (unknown > 0 ? " §8(" + unknown + " unloaded)" : ""));
+        // The checklist is the useful half: it says which walls are open, in the order they're
+        // configured, so it doubles as directions.
+        lines.add(SnoozlingTracker.checklist());
         return lines;
     }
 

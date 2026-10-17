@@ -64,6 +64,10 @@ public class ShinyMoulConfig extends Config {
     public FloorDropsCategory floorDrops = new FloorDropsCategory();
 
     @Expose
+    @Category(name = "Floor drop types", desc = "Floor drop types")
+    public FloorDropTypesCategory floorDropTypes = new FloorDropTypesCategory();
+
+    @Expose
     @Category(name = "Party coordination", desc = "Party coordination")
     public PartyCoordinationCategory partyCoordination = new PartyCoordinationCategory();
 
@@ -140,6 +144,14 @@ public class ShinyMoulConfig extends Config {
     public SparklingParticlesCategory sparklingParticles = new SparklingParticlesCategory();
 
     @Expose
+    @Category(name = "Sparkling textures", desc = "Sparkling textures")
+    public SparklingTexturesCategory sparklingTextures = new SparklingTexturesCategory();
+
+    @Expose
+    @Category(name = "Hunt keywords", desc = "Hunt keywords")
+    public HuntKeywordsCategory huntKeywords = new HuntKeywordsCategory();
+
+    @Expose
     @Category(name = "Tracked entities", desc = "Tracked entities")
     public TrackedEntitiesCategory trackedEntities = new TrackedEntitiesCategory();
 
@@ -147,13 +159,73 @@ public class ShinyMoulConfig extends Config {
     @Category(name = "Tracked blocks", desc = "Tracked blocks")
     public TrackedBlocksCategory trackedBlocks = new TrackedBlocksCategory();
 
+    /** Which settings only exist in the private build; the public one hides them. */
+    public static final Set<String> PRIVATE_ONLY = Set.of(
+            "blockThroughWalls",
+            "deepScanSeconds",
+            "fdBerryColour",
+            "fdBerryHideAfter",
+            "fdBerryShow",
+            "fdCoinColour",
+            "fdCoinHideAfter",
+            "fdCoinShow",
+            "fdIcebreakerColour",
+            "fdIcebreakerHideAfter",
+            "fdIcebreakerShow",
+            "fdIncenseColour",
+            "fdIncenseHideAfter",
+            "fdIncenseShow",
+            "fdLimeColour",
+            "fdLimeHideAfter",
+            "fdLimeShow",
+            "fdOrangeColour",
+            "fdOrangeHideAfter",
+            "fdOrangeShow",
+            "fdPurpleColour",
+            "fdPurpleHideAfter",
+            "fdPurpleShow",
+            "fdRandomColour",
+            "fdRandomShow",
+            "fdSeedsColour",
+            "fdSeedsHideAfter",
+            "fdSeedsShow",
+            "fdWormColour",
+            "fdWormHideAfter",
+            "fdWormShow",
+            "floorDropBoxes",
+            "floorDropFakeItems",
+            "floorDropFakeOutline",
+            "floorDropLabelColour",
+            "floorDropLabelScale",
+            "floorDropLog",
+            "floorDropLogChat",
+            "floorDropOnlyMyBiome",
+            "floorDropPredict",
+            "floorDropRange",
+            "floorDropThroughWalls",
+            "glowMatches",
+            "groundObjectThroughWalls",
+            "hideyhoCommand",
+            "hideyhoInsideOutside",
+            "hideyhoSlashCommands",
+            "highlightThroughWalls",
+            "hypixelApiKey",
+            "openHuntKeywords",
+            "openSparklingTextures",
+            "scanEntityData",
+            "shaderMarkers",
+            "textureDetection",
+            "trackSnoozlingWalls");
+
     /** Category identifier -> the section name the old screen filters on. */
     public static final Map<Integer, String> LIST_EDITORS = Map.of(
-            0, "Tracked entities",
-            1, "Tracked blocks",
-            2, "Sparkling particles",
-            3, "Critter list",
-            4, "Snoozling walls");
+            0, "Hunt keywords",
+            1, "Tracked entities",
+            2, "Tracked blocks",
+            3, "Sparkling particles",
+            4, "Sparkling textures",
+            5, "Critter list",
+            6, "Snoozling walls");
 
     @Override
     public boolean isValidRunnable(int runnableId) {
@@ -201,6 +273,16 @@ public class ShinyMoulConfig extends Config {
         public String huntLocation = "";
 
         @Expose
+        @ConfigOption(name = "Deep data scan", desc = "Also search item data and NBT, not just nameplates.")
+        @ConfigEditorBoolean
+        public boolean scanEntityData;
+
+        @Expose
+        @ConfigOption(name = "Deep rescan (s)", desc = "How long a deep scan result is reused per entity.")
+        @ConfigEditorSlider(minValue = 1f, maxValue = 60f, minStep = 1f)
+        public int deepScanSeconds;
+
+        @Expose
         @ConfigOption(name = "Re-alert after (s)", desc = "Silence before the same entity alerts again.")
         @ConfigEditorSlider(minValue = 1f, maxValue = 600f, minStep = 1f)
         public int renotifySeconds;
@@ -237,6 +319,11 @@ public class ShinyMoulConfig extends Config {
         @ConfigOption(name = "Action bar", desc = "Show finds on the action bar too.")
         @ConfigEditorBoolean
         public boolean actionBar;
+
+        @Expose
+        @ConfigOption(name = "Glow matches", desc = "Add a glow outline to matched entities.")
+        @ConfigEditorBoolean
+        public boolean glowMatches;
 
     }
 
@@ -374,6 +461,210 @@ public class ShinyMoulConfig extends Config {
         @ConfigOption(name = "Colour (hex)", desc = "Drop outline colour.")
         @ConfigEditorText
         public String floorDropColor = "";
+
+        @Expose
+        @ConfigOption(name = "Through walls", desc = "Draw drop outlines through terrain.")
+        @ConfigEditorBoolean
+        public boolean floorDropThroughWalls;
+
+        @Expose
+        @ConfigOption(name = "Log drops", desc = "Log each drop's item_display ids and what it gave, per run (shinyhunter-floor-drops.json).")
+        @ConfigEditorBoolean
+        public boolean floorDropLog;
+
+        @Expose
+        @ConfigOption(name = "Log drops in chat", desc = "Also say each logged drop in chat.")
+        @ConfigEditorBoolean
+        public boolean floorDropLogChat;
+
+        @Expose
+        @ConfigOption(name = "Predict drops", desc = "Label each drop with what it will give, from the run's spawn order (needs Log drops).")
+        @ConfigEditorBoolean
+        public boolean floorDropPredict;
+
+        @Expose
+        @ConfigOption(name = "Label size", desc = "Size of the predicted drop labels.")
+        @ConfigEditorSlider(minValue = 0.3f, maxValue = 4.0f, minStep = 0.1f)
+        public double floorDropLabelScale;
+
+        @Expose
+        @ConfigOption(name = "Label colour", desc = "\"type\" for each drop type's colour, or a hex colour for every label.")
+        @ConfigEditorText
+        public String floorDropLabelColour = "";
+
+        @Expose
+        @ConfigOption(name = "Drop boxes", desc = "Box each predicted drop, in its label's colour.")
+        @ConfigEditorBoolean
+        public boolean floorDropBoxes;
+
+        @Expose
+        @ConfigOption(name = "Stand-in items", desc = "Show a dropped item on each predicted drop.")
+        @ConfigEditorBoolean
+        public boolean floorDropFakeItems;
+
+        @Expose
+        @ConfigOption(name = "Outline stand-ins", desc = "Outline the stand-in items in their drop type's colour.")
+        @ConfigEditorBoolean
+        public boolean floorDropFakeOutline;
+
+        @Expose
+        @ConfigOption(name = "Prediction range", desc = "Show predicted drops this far away, in blocks.")
+        @ConfigEditorSlider(minValue = 8f, maxValue = 256f, minStep = 1f)
+        public int floorDropRange;
+
+        @Expose
+        @ConfigOption(name = "Only my biome", desc = "Only show predicted drops in the biome you're in.")
+        @ConfigEditorBoolean
+        public boolean floorDropOnlyMyBiome;
+
+    }
+
+    public static class FloorDropTypesCategory {
+
+        @Expose
+        @ConfigOption(name = "Lime Gem", desc = "Show predicted Lime Gem drops.")
+        @ConfigEditorBoolean
+        public boolean fdLimeShow;
+
+        @Expose
+        @ConfigOption(name = "Lime Gem colour", desc = "Highlight colour for Lime Gem drops (hex).")
+        @ConfigEditorText
+        public String fdLimeColour = "";
+
+        @Expose
+        @ConfigOption(name = "Lime Gem hide after", desc = "Hide the rest after picking up this many in a run (0 = never).")
+        @ConfigEditorSlider(minValue = 0f, maxValue = 20f, minStep = 1f)
+        public int fdLimeHideAfter;
+
+        @Expose
+        @ConfigOption(name = "Purple Gem", desc = "Show predicted Purple Gem drops.")
+        @ConfigEditorBoolean
+        public boolean fdPurpleShow;
+
+        @Expose
+        @ConfigOption(name = "Purple Gem colour", desc = "Highlight colour for Purple Gem drops (hex).")
+        @ConfigEditorText
+        public String fdPurpleColour = "";
+
+        @Expose
+        @ConfigOption(name = "Purple Gem hide after", desc = "Hide the rest after picking up this many in a run (0 = never).")
+        @ConfigEditorSlider(minValue = 0f, maxValue = 20f, minStep = 1f)
+        public int fdPurpleHideAfter;
+
+        @Expose
+        @ConfigOption(name = "Orange Gem", desc = "Show predicted Orange Gem drops.")
+        @ConfigEditorBoolean
+        public boolean fdOrangeShow;
+
+        @Expose
+        @ConfigOption(name = "Orange Gem colour", desc = "Highlight colour for Orange Gem drops (hex).")
+        @ConfigEditorText
+        public String fdOrangeColour = "";
+
+        @Expose
+        @ConfigOption(name = "Orange Gem hide after", desc = "Hide the rest after picking up this many in a run (0 = never).")
+        @ConfigEditorSlider(minValue = 0f, maxValue = 20f, minStep = 1f)
+        public int fdOrangeHideAfter;
+
+        @Expose
+        @ConfigOption(name = "Wriggleworm", desc = "Show predicted Wriggleworm drops.")
+        @ConfigEditorBoolean
+        public boolean fdWormShow;
+
+        @Expose
+        @ConfigOption(name = "Wriggleworm colour", desc = "Highlight colour for Wriggleworm drops (hex).")
+        @ConfigEditorText
+        public String fdWormColour = "";
+
+        @Expose
+        @ConfigOption(name = "Wriggleworm hide after", desc = "Hide the rest after picking up this many in a run (0 = never).")
+        @ConfigEditorSlider(minValue = 0f, maxValue = 20f, minStep = 1f)
+        public int fdWormHideAfter;
+
+        @Expose
+        @ConfigOption(name = "Yogi Berry", desc = "Show predicted Yogi Berry drops.")
+        @ConfigEditorBoolean
+        public boolean fdBerryShow;
+
+        @Expose
+        @ConfigOption(name = "Yogi Berry colour", desc = "Highlight colour for Yogi Berry drops (hex).")
+        @ConfigEditorText
+        public String fdBerryColour = "";
+
+        @Expose
+        @ConfigOption(name = "Yogi Berry hide after", desc = "Hide the rest after picking up this many in a run (0 = never).")
+        @ConfigEditorSlider(minValue = 0f, maxValue = 20f, minStep = 1f)
+        public int fdBerryHideAfter;
+
+        @Expose
+        @ConfigOption(name = "Bag of Seeds", desc = "Show predicted Bag of Seeds drops.")
+        @ConfigEditorBoolean
+        public boolean fdSeedsShow;
+
+        @Expose
+        @ConfigOption(name = "Bag of Seeds colour", desc = "Highlight colour for Bag of Seeds drops (hex).")
+        @ConfigEditorText
+        public String fdSeedsColour = "";
+
+        @Expose
+        @ConfigOption(name = "Bag of Seeds hide after", desc = "Hide the rest after picking up this many in a run (0 = never).")
+        @ConfigEditorSlider(minValue = 0f, maxValue = 20f, minStep = 1f)
+        public int fdSeedsHideAfter;
+
+        @Expose
+        @ConfigOption(name = "Soothing Incense", desc = "Show predicted Soothing Incense drops.")
+        @ConfigEditorBoolean
+        public boolean fdIncenseShow;
+
+        @Expose
+        @ConfigOption(name = "Soothing Incense colour", desc = "Highlight colour for Soothing Incense drops (hex).")
+        @ConfigEditorText
+        public String fdIncenseColour = "";
+
+        @Expose
+        @ConfigOption(name = "Soothing Incense hide after", desc = "Hide the rest after picking up this many in a run (0 = never).")
+        @ConfigEditorSlider(minValue = 0f, maxValue = 20f, minStep = 1f)
+        public int fdIncenseHideAfter;
+
+        @Expose
+        @ConfigOption(name = "Shining Coin", desc = "Show predicted Shining Coin drops.")
+        @ConfigEditorBoolean
+        public boolean fdCoinShow;
+
+        @Expose
+        @ConfigOption(name = "Shining Coin colour", desc = "Highlight colour for Shining Coin drops (hex).")
+        @ConfigEditorText
+        public String fdCoinColour = "";
+
+        @Expose
+        @ConfigOption(name = "Shining Coin hide after", desc = "Hide the rest after picking up this many in a run (0 = never).")
+        @ConfigEditorSlider(minValue = 0f, maxValue = 20f, minStep = 1f)
+        public int fdCoinHideAfter;
+
+        @Expose
+        @ConfigOption(name = "Icebreaker", desc = "Show predicted Icebreaker drops.")
+        @ConfigEditorBoolean
+        public boolean fdIcebreakerShow;
+
+        @Expose
+        @ConfigOption(name = "Icebreaker colour", desc = "Highlight colour for Icebreaker drops (hex).")
+        @ConfigEditorText
+        public String fdIcebreakerColour = "";
+
+        @Expose
+        @ConfigOption(name = "Icebreaker hide after", desc = "Hide the rest after picking up this many in a run (0 = never).")
+        @ConfigEditorSlider(minValue = 0f, maxValue = 20f, minStep = 1f)
+        public int fdIcebreakerHideAfter;
+
+        @Expose
+        @ConfigOption(name = "Random drops", desc = "Show predicted random drops (XP, Essence or a shard).")
+        @ConfigEditorBoolean
+        public boolean fdRandomShow;
+
+        @Expose
+        @ConfigOption(name = "Random drops colour", desc = "Highlight colour for random drops (hex).")
+        @ConfigEditorText
+        public String fdRandomColour = "";
 
     }
 
@@ -545,6 +836,11 @@ public class ShinyMoulConfig extends Config {
         public boolean partyDexSkipShared;
 
         @Expose
+        @ConfigOption(name = "Hypixel API key", desc = "Your developer key from developer.hypixel.net. Never logged.")
+        @ConfigEditorText
+        public String hypixelApiKey = "";
+
+        @Expose
         @ConfigOption(name = "Dex path", desc = "Profile path to the Sparkling Critterdex, once known. Blank = discover.")
         @ConfigEditorText
         public String sparklingDexPath = "";
@@ -638,8 +934,13 @@ public class ShinyMoulConfig extends Config {
         public String snoozlingWallColor = "";
 
         @Expose
+        @ConfigOption(name = "Track walls", desc = "Show how many Snoozling walls have been broken.")
+        @ConfigEditorBoolean
+        public boolean trackSnoozlingWalls;
+
+        @Expose
         @ConfigOption(name = "Snoozling walls list", desc = "Open the list editor for snoozling walls.")
-        @ConfigEditorButton(runnableId = 4, buttonText = "Edit")
+        @ConfigEditorButton(runnableId = 6, buttonText = "Edit")
         public boolean openSnoozlingWalls = false;
 
     }
@@ -681,7 +982,7 @@ public class ShinyMoulConfig extends Config {
 
         @Expose
         @ConfigOption(name = "Critter list list", desc = "Open the list editor for critter list.")
-        @ConfigEditorButton(runnableId = 3, buttonText = "Edit")
+        @ConfigEditorButton(runnableId = 5, buttonText = "Edit")
         public boolean openCritterList = false;
 
     }
@@ -753,6 +1054,21 @@ public class ShinyMoulConfig extends Config {
         public int presenceRadius;
 
         @Expose
+        @ConfigOption(name = "!hidey command", desc = "Answer !hidey / !hideyho with plain coordinates.")
+        @ConfigEditorBoolean
+        public boolean hideyhoCommand;
+
+        @Expose
+        @ConfigOption(name = "Hidey slash commands", desc = "Enable /sharehidey, /shide and /hide.")
+        @ConfigEditorBoolean
+        public boolean hideyhoSlashCommands;
+
+        @Expose
+        @ConfigOption(name = "Hidey inside/outside", desc = "Title \"Hideyho inside!\" or \"outside!\" once it hides after the quest.")
+        @ConfigEditorBoolean
+        public boolean hideyhoInsideOutside;
+
+        @Expose
         @ConfigOption(name = "Instant party chat", desc = "Send right away when nothing has been sent recently.")
         @ConfigEditorBoolean
         public boolean instantPartyChat;
@@ -807,6 +1123,11 @@ public class ShinyMoulConfig extends Config {
     public static class HUDCategory {
 
         @Expose
+        @ConfigOption(name = "Shader markers", desc = "On-screen dots for highlights when shaders hide them: auto / always / never.")
+        @ConfigEditorText
+        public String shaderMarkers = "";
+
+        @Expose
         @ConfigOption(name = "Show HUD", desc = "Draw the HUD panels on screen.")
         @ConfigEditorBoolean
         public boolean showHud;
@@ -839,6 +1160,11 @@ public class ShinyMoulConfig extends Config {
         @ConfigOption(name = "Search radius", desc = "How far to look for ground objects, in blocks.")
         @ConfigEditorSlider(minValue = 8f, maxValue = 128f, minStep = 1f)
         public int groundObjectScanRadius;
+
+        @Expose
+        @ConfigOption(name = "Through walls", desc = "Draw ground object outlines through terrain.")
+        @ConfigEditorBoolean
+        public boolean groundObjectThroughWalls;
 
         @Expose
         @ConfigOption(name = "Announce coords", desc = "Print coordinates in chat when one is spotted.")
@@ -923,6 +1249,11 @@ public class ShinyMoulConfig extends Config {
         public boolean highlightTintMobs;
 
         @Expose
+        @ConfigOption(name = "Through walls", desc = "Draw entity outlines through terrain.")
+        @ConfigEditorBoolean
+        public boolean highlightThroughWalls;
+
+        @Expose
         @ConfigOption(name = "Ignore capture UI", desc = "Don't treat the capsule's CAPTURING display as a mob.")
         @ConfigEditorBoolean
         public boolean highlightIgnoreCapturing;
@@ -958,8 +1289,31 @@ public class ShinyMoulConfig extends Config {
 
         @Expose
         @ConfigOption(name = "Sparkling particles list", desc = "Open the list editor for sparkling particles.")
-        @ConfigEditorButton(runnableId = 2, buttonText = "Edit")
+        @ConfigEditorButton(runnableId = 3, buttonText = "Edit")
         public boolean openSparklingParticles = false;
+
+    }
+
+    public static class SparklingTexturesCategory {
+
+        @Expose
+        @ConfigOption(name = "Texture detection", desc = "Treat a sparkling-only skin texture as a sparkling.")
+        @ConfigEditorBoolean
+        public boolean textureDetection;
+
+        @Expose
+        @ConfigOption(name = "Sparkling textures list", desc = "Open the list editor for sparkling textures.")
+        @ConfigEditorButton(runnableId = 4, buttonText = "Edit")
+        public boolean openSparklingTextures = false;
+
+    }
+
+    public static class HuntKeywordsCategory {
+
+        @Expose
+        @ConfigOption(name = "Hunt keywords list", desc = "Open the list editor for hunt keywords.")
+        @ConfigEditorButton(runnableId = 0, buttonText = "Edit")
+        public boolean openHuntKeywords = false;
 
     }
 
@@ -967,7 +1321,7 @@ public class ShinyMoulConfig extends Config {
 
         @Expose
         @ConfigOption(name = "Tracked entities list", desc = "Open the list editor for tracked entities.")
-        @ConfigEditorButton(runnableId = 0, buttonText = "Edit")
+        @ConfigEditorButton(runnableId = 1, buttonText = "Edit")
         public boolean openTrackedEntities = false;
 
     }
@@ -985,8 +1339,13 @@ public class ShinyMoulConfig extends Config {
         public int blockScanRadius;
 
         @Expose
+        @ConfigOption(name = "Through walls", desc = "Draw block outlines through terrain.")
+        @ConfigEditorBoolean
+        public boolean blockThroughWalls;
+
+        @Expose
         @ConfigOption(name = "Tracked blocks list", desc = "Open the list editor for tracked blocks.")
-        @ConfigEditorButton(runnableId = 1, buttonText = "Edit")
+        @ConfigEditorButton(runnableId = 2, buttonText = "Edit")
         public boolean openTrackedBlocks = false;
 
     }

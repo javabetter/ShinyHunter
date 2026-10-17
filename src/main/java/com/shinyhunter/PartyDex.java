@@ -287,7 +287,7 @@ public final class PartyDex {
 
     private static void lookup(String name) {
         if (!HypixelApi.hasKey()) {
-            tell("§cPlayer lookups aren't available§r — can't show " + name + "'s sparklings.");
+            tell("§cNo Hypixel API key set§r — add one in settings to see " + name + "'s sparklings.");
             return;
         }
         if (!IN_FLIGHT.add(name.toLowerCase())) {
@@ -803,7 +803,7 @@ public final class PartyDex {
      */
     public static void compare(List<String> names, boolean partyStyle) {
         if (!HypixelApi.hasKey()) {
-            tell("§cPlayer lookups aren't available.");
+            tell("§cNo Hypixel API key set.§r Add it under Party sparklings in settings.");
             return;
         }
         Minecraft client = Minecraft.getInstance();
@@ -901,7 +901,7 @@ public final class PartyDex {
     /** For {@code /shiny dex <name>}: look one player up and print the card plus every candidate path. */
     public static void inspect(String name) {
         if (!HypixelApi.hasKey()) {
-            tell("§cPlayer lookups aren't available.");
+            tell("§cNo Hypixel API key set.§r Add it under Party in settings.");
             return;
         }
         Minecraft client = Minecraft.getInstance();
@@ -950,7 +950,7 @@ public final class PartyDex {
         }
         String name = request.group(1);
         if (!HypixelApi.hasKey()) {
-            tell("§cPlayer lookups aren't available§r — can't answer !shiny.");
+            tell("§cNo Hypixel API key set§r — can't answer !shiny.");
             return;
         }
         Minecraft client = Minecraft.getInstance();

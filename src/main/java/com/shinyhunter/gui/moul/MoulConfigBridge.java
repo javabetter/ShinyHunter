@@ -106,7 +106,9 @@ public final class MoulConfigBridge {
         ManagedConfig<ShinyMoulConfig> config = managed();
         pull(config.getInstance());
 
-        editor = new MoulConfigEditor<>(config.getProcessor().getAllCategories(), config.getInstance());
+        // Built by hand rather than with getEditor(): the public edition shows a filtered set of
+        // categories, and this is the only way to hand MoulConfig a different list.
+        editor = new MoulConfigEditor<>(categories(config), config.getInstance());
         if (fieldName != null) {
             scrollTo(config, fieldName);
         }
@@ -127,6 +129,72 @@ public final class MoulConfigBridge {
         }
     }
 
+    /**
+     * The categories to show. In the public edition the settings whose features aren't in that
+     * build are dropped, along with any category left empty — a switch that does nothing is worse
+     * than no switch.
+     */
+    private static LinkedHashMap<String, ? extends ProcessedCategory> categories(
+            ManagedConfig<ShinyMoulConfig> config) {
+        LinkedHashMap<String, ? extends ProcessedCategory> all = config.getProcessor().getAllCategories();
+        if (!Edition.PUBLIC) {
+            return all;
+        }
+        List<ProcessedCategory> kept = new ArrayList<>();
+        for (ProcessedCategory category : all.values()) {
+            List<ProcessedOption> options = new ArrayList<>();
+            for (ProcessedOption option : category.getOptions()) {
+                Field field = fieldOf(option);
+                if (field == null || !ShinyMoulConfig.PRIVATE_ONLY.contains(field.getName())) {
+                    options.add(option);
+                }
+            }
+            if (!options.isEmpty()) {
+                kept.add(new FilteredCategory(category, options));
+            }
+        }
+        return ProcessedCategory.collect(kept);
+    }
+
+    /** A category with some of its options hidden; everything else reads through. */
+    private record FilteredCategory(ProcessedCategory delegate, List<ProcessedOption> options)
+            implements ProcessedCategory {
+
+        @Override
+        public io.github.notenoughupdates.moulconfig.common.text.StructuredText getDisplayName() {
+            return delegate.getDisplayName();
+        }
+
+        @Override
+        public io.github.notenoughupdates.moulconfig.common.text.StructuredText getDescription() {
+            return delegate.getDescription();
+        }
+
+        @Override
+        public String getIdentifier() {
+            return delegate.getIdentifier();
+        }
+
+        @Override
+        public String getParentCategoryId() {
+            return delegate.getParentCategoryId();
+        }
+
+        @Override
+        public List<? extends ProcessedOption> getOptions() {
+            return options;
+        }
+
+        @Override
+        public Map<? extends Integer, ? extends ProcessedOption> getAccordionAnchors() {
+            return delegate.getAccordionAnchors();
+        }
+
+        @Override
+        public String getDebugDeclarationLocation() {
+            return delegate.getDebugDeclarationLocation();
+        }
+    }
 
     /**
      * Writes the screen's changes back when it closes.

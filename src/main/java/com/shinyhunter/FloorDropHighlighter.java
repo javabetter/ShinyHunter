@@ -54,7 +54,9 @@ public final class FloorDropHighlighter {
     public static void onClientTick(Minecraft client) {
         ShinyConfig config = ShinyConfig.get();
 
+        // While drops are predicted, FloorDropView marks them instead of the string clusters.
         if (!config.highlightFloorDrops
+                || (!Edition.PUBLIC && config.floorDropPredict && FloorDropLog.active())
                 || client.level == null
                 || client.player == null
                 || (config.onlyInSkyblock && !SkyblockSidebar.inSkyblock(client))) {
@@ -189,9 +191,11 @@ public final class FloorDropHighlighter {
                 // Item displays have a near-zero bounding box, so pad it into something you can see.
                 // Drops don't move, so a plain fixed cuboid is right here — the whole cluster gets
                 // one box rather than a tracking gizmo per part.
-                Gizmos
+                HighlightMarkers.add(box.getCenter(), stroke, "Drop");
+                var properties = Gizmos
                         .cuboid(box.inflate(0.35), style)
                         .persistForMillis(GIZMO_LIFETIME_MILLIS);
+                Shaders.place(properties, config.floorDropThroughWalls && !Edition.PUBLIC);
             }
         } catch (IllegalStateException e) {
             ShinyHunterClient.LOGGER.debug("Can't emit floor drop highlights", e);

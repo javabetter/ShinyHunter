@@ -22,3 +22,7 @@ Thumbs.db
 # Never commit keys or local config
 *.env
 config/
+
+# Wrangler state (holds the Cloudflare account)
+worker/.wrangler/
+worker/node_modules/
