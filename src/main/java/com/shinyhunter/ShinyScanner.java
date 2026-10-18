@@ -72,6 +72,9 @@ public final class ShinyScanner {
     /** Entity id -> the reason it last matched, so the announce step can say so. */
     private static final Map<Integer, Reason> REASONS = new HashMap<>();
 
+    /** Entity id -> the critter its sparkling-only skin belongs to ({@link SparklingSkins}). */
+    private static final Map<Integer, String> SKIN_CRITTERS = new HashMap<>();
+
     private record DeepResult(long checkedAt, boolean matched) {
     }
 
@@ -236,7 +239,10 @@ public final class ShinyScanner {
             if (entity == client.player || entity.isRemoved() || already.contains(entity.getId())) {
                 continue;
             }
-            if (!(entity instanceof net.minecraft.world.entity.LivingEntity)) {
+            // Item displays can carry a critter's skin too (a player head shown on one), so they're
+            // checked for textures; particles are only scored on mobs.
+            boolean display = entity instanceof net.minecraft.world.entity.Display.ItemDisplay;
+            if (!(entity instanceof net.minecraft.world.entity.LivingEntity) && !display) {
                 continue;
             }
             boolean armourStand = entity instanceof net.minecraft.world.entity.decoration.ArmorStand;
@@ -245,8 +251,19 @@ public final class ShinyScanner {
             // stand wearing a player head (a sparkling Driftling is a silverfish, a head-wearing
             // stand, and a nametag stand, stacked). Only a configured hash matches, so the hundreds
             // of decorative stands around a hub can't trip it.
-            if (config.textureDetection && !Edition.PUBLIC && !textures.isEmpty()) {
+            if (config.textureDetection && !Edition.PUBLIC) {
                 java.util.Set<String> hashes = TextureProbe.hashesOf(entity);
+                // The built-in skins name the critter; one critter made of several skinned parts
+                // (Shyworm) is matched once, on the first part found.
+                String skinCritter = SparklingSkins.critterFor(hashes);
+                if (skinCritter != null) {
+                    if (!sameCritterNearby(matches, entity, skinCritter)) {
+                        matches.add(new Match(entity, Reason.TEXTURE));
+                        SKIN_CRITTERS.put(entity.getId(), skinCritter);
+                    }
+                    already.add(entity.getId());
+                    continue;
+                }
                 boolean hit = false;
                 for (String hash : hashes) {
                     for (String wanted : textures) {
@@ -268,7 +285,7 @@ public final class ShinyScanner {
 
             // Trails are scored against the mob itself, not its stands — the stands are stacked
             // on the same spot and would each count the same trail again.
-            if (!armourStand && config.particleDetection && !config.sparklingParticles.isEmpty()) {
+            if (!armourStand && !display && config.particleDetection && !config.sparklingParticles.isEmpty()) {
                 int seen = ParticleWatcher.countNear(entity.position(), config.particleRadius,
                         window, config.sparklingParticles);
                 if (seen >= config.particleThreshold) {
@@ -277,6 +294,17 @@ public final class ShinyScanner {
                 }
             }
         }
+    }
+
+    /** A skin match of the same critter already within a few blocks: another part of it. */
+    private static boolean sameCritterNearby(List<Match> matches, Entity entity, String critter) {
+        for (Match match : matches) {
+            if (match.reason() == Reason.TEXTURE && critter.equals(SKIN_CRITTERS.get(match.entity().getId()))
+                    && match.entity().distanceToSqr(entity) < 6.0 * 6.0) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** True when the sidebar's zone row names the configured hunting area. */
@@ -360,7 +388,10 @@ public final class ShinyScanner {
         if (sparkling) {
             // A trail or skin match is on the mob itself, whose name is the vanilla one
             // ("Silverfish"); the Skyblock name is on the nametag stand above it.
-            String critter = critterNear(client, entity);
+            String critter = SKIN_CRITTERS.get(entity.getId());
+            if (critter == null) {
+                critter = critterNear(client, entity);
+            }
             if (critter != null) {
                 name = "SPARKLING " + critter;
             } else if (CritterDex.findIn(name) == null) {
