@@ -16,6 +16,7 @@ TOKEN = re.compile(
     r'(?P<public_guard>if \(!Edition\.PUBLIC\) \{)'
     r'|(?P<open>\{)|(?P<close>\})'
     r'|section\("(?P<section>[^"]*)"\)'
+    r'|group\("(?P<group>[^"]*)"\)'
     r'|(?P<kind>bool|text|number|decimal)\('
     r'\s*"(?P<label>(?:[^"\\]|\\.)*)",\s*"(?P<tip>(?:[^"\\]|\\.)*)",'
     r'\s*\(\)\s*->\s*c\.(?P<field>\w+),\s*v\s*->\s*c\.\w+\s*=\s*v'
@@ -23,9 +24,12 @@ TOKEN = re.compile(
     r'|(?P<listcall>build(?:Keyword|Tracker|Block|CritterHud|StringList)\w*Rows?\()'
 )
 
-rows = []          # (section, kind, label, tip, field, min, max, private_only)
+rows = []          # (section, kind, label, tip, field, min, max, private_only, group)
 sections = []      # section names in order
 section = None
+group = None       # the group("...") heading rows are currently under, within the section
+entries = {}       # section -> ordered ("row", row) / ("list", name, group, private)
+private_groups = set()  # (section, group) declared inside a private-only guard
 depth = 0
 guard_depths = []  # brace depths at which an Edition.PUBLIC guard opened
 private_sections = set()  # sections declared inside a private-only guard
@@ -45,14 +49,24 @@ for m in TOKEN.finditer(body):
         continue
     if m.group("section") is not None:
         section = m.group("section")
+        group = None
         if section not in sections:
             sections.append(section)
         if guard_depths:
             private_sections.add(section)
+        entries.setdefault(section, []).append(("heading", section, None, bool(guard_depths)))
+        continue
+    if m.group("group") is not None:
+        group = m.group("group")
+        if guard_depths:
+            private_groups.add((section, group))
+        entries.setdefault(section, []).append(("heading", group, group, bool(guard_depths)))
         continue
     if m.group("kind"):
-        rows.append((section, m.group("kind"), m.group("label"), m.group("tip"),
-                     m.group("field"), m.group("min"), m.group("max"), bool(guard_depths)))
+        row = (section, m.group("kind"), m.group("label"), m.group("tip"),
+               m.group("field"), m.group("min"), m.group("max"), bool(guard_depths), group)
+        rows.append(row)
+        entries.setdefault(section, []).append(("row", row))
 
 # Sections whose real content is a list editor; those get a button into the old screen.
 LIST_SECTIONS = {
@@ -64,6 +78,18 @@ LIST_SECTIONS = {
     "Critter list": "Critter list",
     "Snoozling walls": "Snoozling walls",
 }
+
+# A heading (section or group) named like a list section gets that list's editor button, in place.
+for sec in list(entries):
+    resolved = []
+    for entry in entries[sec]:
+        if entry[0] == "heading":
+            if entry[1] in LIST_SECTIONS:
+                resolved.append(("list", entry[1], entry[2], entry[3]))
+            continue
+        resolved.append(entry)
+    entries[sec] = resolved
+list_names = [e[1] for sec in sections for e in entries.get(sec, []) if e[0] == "list"]
 
 def camel(text):
     parts = re.split(r"[^A-Za-z0-9]+", text)
@@ -83,6 +109,8 @@ lines.append("""package com.shinyhunter.gui.moul;
 import com.google.gson.annotations.Expose;
 import io.github.notenoughupdates.moulconfig.Config;
 import io.github.notenoughupdates.moulconfig.annotations.Category;
+import io.github.notenoughupdates.moulconfig.annotations.ConfigAccordionId;
+import io.github.notenoughupdates.moulconfig.annotations.ConfigEditorAccordion;
 import io.github.notenoughupdates.moulconfig.annotations.ConfigEditorBoolean;
 import io.github.notenoughupdates.moulconfig.annotations.ConfigEditorButton;
 import io.github.notenoughupdates.moulconfig.annotations.ConfigEditorSlider;
@@ -123,8 +151,7 @@ public class ShinyMoulConfig extends Config {
 # categories
 cat_fields = []
 for section in sections:
-    rows_here = by_section.get(section, [])
-    if not rows_here and section not in LIST_SECTIONS:
+    if not entries.get(section):
         continue
     cls = camel(section) + "Category"
     field = camel(section)
@@ -138,14 +165,16 @@ for section, cls, field in cat_fields:
 
 # runnable ids for the list-editor buttons
 runnables = []
-for section in LIST_SECTIONS:
-    if any(s == section for s, _, _ in cat_fields):
-        runnables.append(section)
+for name in list_names:
+    if name not in runnables:
+        runnables.append(name)
 
 lines.append("    /** Which settings only exist in the private build; the public one hides them. */")
 private_only = sorted({row[4] for row in rows if row[7]}
-                      # a private section's list-editor button is private too
-                      | {"open" + camel(sec) for sec in private_sections if sec in LIST_SECTIONS})
+                      # a private list's editor button is private too
+                      | {"open" + camel(e[1]) for sec in entries for e in entries[sec] if e[0] == "list" and e[3]}
+                      # and so is the accordion of a group that only exists in the private build
+                      | {"accordion" + camel(sec) + camel(grp) for sec, grp in private_groups})
 lines.append("    public static final Set<String> PRIVATE_ONLY = Set.of(")
 lines.append("            " + ",\n            ".join('"%s"' % f for f in private_only) + ");\n")
 
@@ -169,11 +198,40 @@ lines.append("""    @Override
 
 for section, cls, field in cat_fields:
     lines.append("    public static class %s {\n" % cls)
-    for (_, kind, label, tip, name, low, high, private_only_row) in by_section.get(section, []):
+    accordions = {}
+    def accordion_of(grp):
+        # Each group heading becomes a collapsible accordion; its options carry its id.
+        if grp is None:
+            return None
+        if grp not in accordions:
+            accordions[grp] = len(accordions)
+            lines.append("        @Expose")
+            lines.append('        @ConfigOption(name = "%s", desc = "")' % grp)
+            lines.append("        @ConfigEditorAccordion(id = %d)" % accordions[grp])
+            lines.append("        public boolean accordion%s%s = false;\n" % (camel(section), camel(grp)))
+        return accordions[grp]
+    for entry in entries.get(section, []):
+        if entry[0] == "list":
+            _, list_name, grp, _private = entry
+            acc = accordion_of(grp)
+            idx = runnables.index(list_name)
+            lines.append("        @Expose")
+            if acc is not None:
+                lines.append("        @ConfigAccordionId(id = %d)" % acc)
+            button = list_name if list_name.lower().endswith("list") else list_name + " list"
+            lines.append('        @ConfigOption(name = "%s", desc = "Open the list editor for %s.")'
+                         % (button, list_name.lower()))
+            lines.append('        @ConfigEditorButton(runnableId = %d, buttonText = "Edit")' % idx)
+            lines.append("        public boolean open%s = false;\n" % camel(list_name))
+            continue
+        (_, kind, label, tip, name, low, high, private_only_row, grp) = entry[1]
         if name in used:
             continue
         used.add(name)
+        acc = accordion_of(grp)
         lines.append("        @Expose")
+        if acc is not None:
+            lines.append("        @ConfigAccordionId(id = %d)" % acc)
         lines.append('        @ConfigOption(name = "%s", desc = "%s")' % (label, tip))
         if kind == "bool":
             lines.append("        @ConfigEditorBoolean")
@@ -188,13 +246,6 @@ for section, cls, field in cat_fields:
             step = "0.1f"
             lines.append("        @ConfigEditorSlider(minValue = %sf, maxValue = %sf, minStep = %s)" % (low, high, step))
             lines.append("        public double %s;\n" % name)
-    if section in LIST_SECTIONS:
-        idx = runnables.index(section)
-        lines.append("        @Expose")
-        lines.append('        @ConfigOption(name = "%s list", desc = "Open the list editor for %s.")'
-                     % (section, section.lower()))
-        lines.append('        @ConfigEditorButton(runnableId = %d, buttonText = "Edit")' % idx)
-        lines.append("        public boolean open%s = false;\n" % camel(section))
     lines.append("    }\n")
 
 lines.append("}")

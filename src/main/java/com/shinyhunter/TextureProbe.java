@@ -45,6 +45,11 @@ public final class TextureProbe {
                     collect(living.getItemBySlot(slot), hashes);
                 }
             }
+            // A player head shown by an item display: its skin is base64 inside the profile, so it
+            // has to be decoded like a worn head — it never appears as a plain URL in the data.
+            if (entity instanceof net.minecraft.world.entity.Display.ItemDisplay display) {
+                collect(display.getItemStack(), hashes);
+            }
             // Item displays and anything else that syncs a stack: EntityDataProbe already walks
             // the synced fields, so the hash appears in its text; scan that for URL hashes too.
             for (String hash : hashesIn(EntityDataProbe.deepText(entity))) {

@@ -202,6 +202,7 @@ public class ShinyHunterClient implements ClientModInitializer {
                 .then(literal("splits").executes(ShinyHunterClient::showSplits))
                 .then(literal("resetpb").executes(ShinyHunterClient::resetBests))
                 .then(literal("zone").executes(ShinyHunterClient::showZone))
+                .then(literal("skins").executes(ShinyHunterClient::showSkins))
                 .then(literal("mode")
                         .executes(c -> showMode(c, SafariMode.select(SafariMode.current().next())))
                         .then(literal("unique").executes(c -> showMode(c, SafariMode.select(SafariMode.UNIQUE))))
@@ -487,6 +488,51 @@ public class ShinyHunterClient implements ClientModInitializer {
             case SPARKLING -> " §7— sparklings someone in the party still lacks (needs the API).";
         });
         context.getSource().sendFeedback(Component.literal("  §8/shiny mode [unique|fullclear|sparkling] — no argument cycles"));
+        return Command.SINGLE_SUCCESS;
+    }
+
+    /**
+     * {@code /shiny skins}: every skin on entities within 48 blocks, and which sparkling it is if
+     * any. For checking a sparkling the skin detection missed: stand by it and run this.
+     */
+    private static int showSkins(CommandContext<FabricClientCommandSource> context) {
+        Minecraft client = Minecraft.getInstance();
+        if (client.level == null || client.player == null) {
+            return 0;
+        }
+        int found = 0;
+        feedback(context, "Skins within 48 blocks §8(full hashes in latest.log)§7; island: §f"
+                + SkyblockSidebar.islandName(client));
+        for (net.minecraft.world.entity.Entity entity : client.level.entitiesForRendering()) {
+            if (entity == client.player || client.player.distanceToSqr(entity) > 48 * 48) {
+                continue;
+            }
+            java.util.Set<String> hashes = TextureProbe.hashesOf(entity);
+            if (hashes.isEmpty()) {
+                continue;
+            }
+            found++;
+            String critter = SparklingSkins.critterFor(hashes);
+            String near = ShinyScanner.critterNear(client, entity);
+            LOGGER.info("Skin probe: #{} {} {}m near '{}' -> {} {}", entity.getId(),
+                    net.minecraft.world.entity.EntityType.getKey(entity.getType()),
+                    Math.round(client.player.distanceTo(entity)), near, critter, hashes);
+            if (found <= 12) {
+                StringBuilder short_ = new StringBuilder();
+                for (String hash : hashes) {
+                    short_.append(short_.isEmpty() ? "" : ", ").append(hash, 0, Math.min(10, hash.length()));
+                }
+                context.getSource().sendFeedback(Component.literal("  " + (critter != null ? "§a✔ SPARKLING " + critter : "§7✘")
+                        + " §8" + net.minecraft.world.entity.EntityType.getKey(entity.getType()).getPath()
+                        + " " + Math.round(client.player.distanceTo(entity)) + "m" + (near != null ? " §7(" + near + ")" : "")
+                        + " §8" + short_));
+            }
+        }
+        if (found == 0) {
+            context.getSource().sendFeedback(Component.literal("  §7No entity with a skin nearby."));
+        } else if (found > 12) {
+            context.getSource().sendFeedback(Component.literal("  §8+" + (found - 12) + " more in latest.log"));
+        }
         return Command.SINGLE_SUCCESS;
     }
 

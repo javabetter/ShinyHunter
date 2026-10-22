@@ -170,8 +170,10 @@ public final class ShinyScanner {
             findByKeyword(client, config, needles, useCache, now, matches);
         }
         // Texture hashes are data the player can't see; the public edition detects by nametag
-        // and particles only.
-        if (config.particleDetection || (config.textureDetection && !Edition.PUBLIC)) {
+        // and particles only. Both channels only mean anything on the Safari island: elsewhere a
+        // statue wearing a sparkling skin would alert forever.
+        if ((config.particleDetection || (config.textureDetection && !Edition.PUBLIC))
+                && SkyblockSidebar.onSafariIslandOrUnknown(client)) {
             findBySignature(client, config, matches);
         }
 
@@ -309,7 +311,10 @@ public final class ShinyScanner {
 
     /** True when the sidebar's zone row names the configured hunting area. */
     public static boolean inHuntArea(Minecraft client, ShinyConfig config) {
-        return SkyblockSidebar.isAtLocation(client, config.huntLocation);
+        // The hunt area's zone row, and the Safari island itself: Torrhus Canyon has a zone of the
+        // same name, and sparkling detection belongs to the island only.
+        return SkyblockSidebar.isAtLocation(client, config.huntLocation)
+                && SkyblockSidebar.onSafariIslandOrUnknown(client);
     }
 
     /**

@@ -78,6 +78,9 @@ public class ConfigScreen extends Screen {
      */
     private String pendingSection;
 
+    /** A group heading waiting for its first row, like {@link #pendingSection}. */
+    private String pendingGroup;
+
     /**
      * The section rows are currently being added to. Unlike {@link #pendingSection} this survives the
      * heading being written out, so every row in a section matches a search for the section's name —
@@ -132,6 +135,7 @@ public class ConfigScreen extends Screen {
         rows.clear();
         contentHeight = 0;
         pendingSection = null;
+        pendingGroup = null;
         currentSection = null;
 
         if (searchBox == null) {
@@ -183,42 +187,18 @@ public class ConfigScreen extends Screen {
     private void buildRows() {
         ShinyConfig c = ShinyConfig.get();
 
+        // ------------------------------------------------------------------ General
+        section("General");
         if (!Edition.PUBLIC) {
             partyModeButton(c); // the public edition keeps location call-outs local, always
         }
-
-        section("Detection");
+        group("Basics");
         bool("Enabled", "Master switch for shiny hunting.", () -> c.enabled, v -> c.enabled = v);
         bool("Only in Skyblock", "Ignore everything outside Hypixel Skyblock.",
                 () -> c.onlyInSkyblock, v -> c.onlyInSkyblock = v);
-        bool("Waypoints", "Mark coordinates the mod picks out of party chat.",
-                () -> c.waypointsEnabled, v -> c.waypointsEnabled = v);
-        decimal("Waypoint clear radius", "Walking this close to a waypoint removes it.",
-                () -> c.waypointClearRadius, v -> c.waypointClearRadius = v, 0.5, 32.0);
-        text("Waypoint colour", "Waypoint colour as hex, e.g. FFDD55.",
-                () -> c.waypointColor, v -> c.waypointColor = v);
-        text("Hunt area", "Area keywords are confined to unless set to hunt everywhere.",
-                () -> c.huntLocation, v -> c.huntLocation = v);
-        if (!Edition.PUBLIC) {
-            bool("Deep data scan", "Also search item data and NBT, not just nameplates.",
-                    () -> c.scanEntityData, v -> c.scanEntityData = v);
-        }
-        if (!Edition.PUBLIC) {
-            number("Deep rescan (s)", "How long a deep scan result is reused per entity.",
-                    () -> c.deepScanSeconds, v -> c.deepScanSeconds = v, 1, 60);
-        }
-        number("Re-alert after (s)", "Silence before the same entity alerts again.",
-                () -> c.renotifySeconds, v -> c.renotifySeconds = v, 1, 600);
-
-        section("World");
-        bool("Hide paintings in Safari", "Don't draw paintings anywhere in the Critter Safari.",
-                () -> c.hidePaintingsInSafari, v -> c.hidePaintingsInSafari = v);
-        number("Reload chunks repeat (ticks)", "Held Reload chunks key fires every this many ticks. Key: Controls or /shiny reloadkey.",
-                () -> c.chunkReloadRepeatTicks, v -> c.chunkReloadRepeatTicks = v, 1, 20);
-
-        section("Alerts");
         bool("Update notices", "Say in chat when a newer Shiny Hunter is out, with a link to it.",
                 () -> c.checkForUpdates, v -> c.checkForUpdates = v);
+        group("Alerts");
         bool("Sound", "Play a sound on a find.", () -> c.playSound, v -> c.playSound = v);
         bool("Action bar", "Show finds on the action bar too.",
                 () -> c.actionBar, v -> c.actionBar = v);
@@ -226,18 +206,231 @@ public class ConfigScreen extends Screen {
             bool("Glow matches", "Add a glow outline to matched entities.",
                     () -> c.glowMatches, v -> c.glowMatches = v);
         }
+        number("Re-alert after (s)", "Silence before the same entity alerts again.",
+                () -> c.renotifySeconds, v -> c.renotifySeconds = v, 1, 600);
+        group("Waypoints");
+        bool("Waypoints", "Mark coordinates the mod picks out of party chat.",
+                () -> c.waypointsEnabled, v -> c.waypointsEnabled = v);
+        decimal("Waypoint clear radius", "Walking this close to a waypoint removes it.",
+                () -> c.waypointClearRadius, v -> c.waypointClearRadius = v, 0.5, 32.0);
+        text("Waypoint colour", "Waypoint colour as hex, e.g. FFDD55.",
+                () -> c.waypointColor, v -> c.waypointColor = v);
+        group("HUD");
+        bool("Show HUD", "Draw the HUD panels on screen.",
+                () -> c.showHud, v -> c.showHud = v);
+        number("HUD x", "Distance from the left edge, in pixels.",
+                () -> c.hudX, v -> c.hudX = v, 0, 2000);
+        number("HUD y", "Distance from the top edge, in pixels.",
+                () -> c.hudY, v -> c.hudY = v, 0, 2000);
+        if (!Edition.PUBLIC) {
+            text("Shader markers", "On-screen dots for highlights when shaders hide them: auto / always / never.",
+                    () -> c.shaderMarkers, v -> c.shaderMarkers = v);
+        }
+        group("Hypixel API");
+        if (!Edition.PUBLIC) {
+            text("Hypixel API key", "Your developer key from developer.hypixel.net. Never logged.",
+                    () -> c.hypixelApiKey, v -> c.hypixelApiKey = v);
+        }
+        text("Dex path", "Profile path to the Sparkling Critterdex, once known. Blank = discover.",
+                () -> c.sparklingDexPath, v -> c.sparklingDexPath = v);
+        group("World");
+        bool("Hide paintings in Safari", "Don't draw paintings anywhere in the Critter Safari.",
+                () -> c.hidePaintingsInSafari, v -> c.hidePaintingsInSafari = v);
+        number("Reload chunks repeat (ticks)", "Held Reload chunks key fires every this many ticks. Key: Controls or /shiny reloadkey.",
+                () -> c.chunkReloadRepeatTicks, v -> c.chunkReloadRepeatTicks = v, 1, 20);
 
-        section("Hotspots");
+        // ------------------------------------------------------------------ Sparkling detection
+        section("Sparkling detection");
+        group("Scanning");
+        text("Hunt area", "Area keywords are confined to unless set to hunt everywhere.",
+                () -> c.huntLocation, v -> c.huntLocation = v);
+        if (!Edition.PUBLIC) {
+            bool("Deep data scan", "Also search item data and NBT, not just nameplates.",
+                    () -> c.scanEntityData, v -> c.scanEntityData = v);
+            number("Deep rescan (s)", "How long a deep scan result is reused per entity.",
+                    () -> c.deepScanSeconds, v -> c.deepScanSeconds = v, 1, 60);
+        }
+        group("Sparkling particles");
+        bool("Particle detection", "Treat a trail of these particles around a mob as a sparkling.",
+                () -> c.particleDetection, v -> c.particleDetection = v);
+        decimal("Trail radius", "How close to the mob a particle must be to count.",
+                () -> c.particleRadius, v -> c.particleRadius = v, 0.5, 16.0);
+        number("Trail threshold", "Particle packets in the window before it counts.",
+                () -> c.particleThreshold, v -> c.particleThreshold = v, 1, 500);
+        number("Trail window (s)", "How far back the trail is counted.",
+                () -> c.particleWindowSeconds, v -> c.particleWindowSeconds = v, 1, 5);
+        if (sectionMatches("Sparkling particles")) {
+            buildStringListRows(c.sparklingParticles, "particle", "minecraft:end_rod");
+        }
+        if (!Edition.PUBLIC) {
+            group("Sparkling textures");
+        }
+        if (!Edition.PUBLIC) {
+            bool("Texture detection", "Treat a sparkling-only skin texture as a sparkling.",
+                    () -> c.textureDetection, v -> c.textureDetection = v);
+            if (sectionMatches("Sparkling textures")) {
+                buildStringListRows(c.sparklingTextures, "texture hash", "");
+            }
+        }
+        if (!Edition.PUBLIC) {
+            group("Hunt keywords");
+        }
+        if (!Edition.PUBLIC) {
+            if (sectionMatches("Hunt keywords")) {
+                buildKeywordRows(c);
+            }
+        }
+        group("Sparkling luck");
+        bool("Tickets since sparkling", "Count Safari tickets used since anyone in the party last caught a sparkling (HUD, chat on a catch, history).",
+                () -> c.trackTicketsSinceSparkling, v -> c.trackTicketsSinceSparkling = v);
+        number("Tickets so far", "Tickets used since the party's last sparkling. Set it by hand if you know it.",
+                () -> c.ticketsSinceSparkling, v -> c.ticketsSinceSparkling = v, 0, 100000);
+
+        // ------------------------------------------------------------------ Runs & critters
+        section("Runs & critters");
+        group("Run");
+        text("Run mode", "unique, fullclear or sparkling: what the missing panels, !m, splits and outlines go for. /shiny mode switches.",
+                () -> c.safariMode, v -> c.safariMode = v);
+        bool("Track critters", "Record which critters turn up on this Safari instance.",
+                () -> c.trackCritters, v -> c.trackCritters = v);
+        bool("Save runs", "Record every Safari run for /shiny history: length, catches, shards, sparklings, splits.",
+                () -> c.runHistoryEnabled, v -> c.runHistoryEnabled = v);
+        bool("Import logs on launch", "Save runs from your last session's log when the game starts. Minecraft only keeps 7 logs a day.",
+                () -> c.autoImportLogs, v -> c.autoImportLogs = v);
+        bool("Coins at insta-sell", "Value shards at the bazaar's instant-sell price instead of the sell-offer price.",
+                () -> c.runCoinsInstaSell, v -> c.runCoinsInstaSell = v);
+        group("Missing critters");
+        bool("Missing HUD panels", "One panel per biome listing what's still missing.",
+                () -> c.showCritterHud, v -> c.showCritterHud = v);
+        bool("Highlight missing only", "Outline critters still outstanding; drop each when caught.",
+                () -> c.highlightMissingCritters, v -> c.highlightMissingCritters = v);
+        text("Missing colour", "Outline colour for outstanding critters, e.g. FFC94A.",
+                () -> c.missingCritterColor, v -> c.missingCritterColor = v);
+        bool("Highlight shulkers", "Outline shulkers as \"Shulker\" until their name loads, then by name.",
+                () -> c.shulkerIsHideonfloor, v -> c.shulkerIsHideonfloor = v);
+        bool("Always highlight shulkers", "Keep shulkers outlined even once that critter is caught.",
+                () -> c.alwaysHighlightShulkers, v -> c.alwaysHighlightShulkers = v);
+        group("Critter list");
+        buildCritterHudRows(c);
+        group("Timers and splits");
+        bool("Run timer", "Show the run clock.",
+                () -> c.showTimer, v -> c.showTimer = v);
+        bool("Track splits", "Record per-biome split times and compare against bests.",
+                () -> c.trackSplits, v -> c.trackSplits = v);
+        bool("Splits on HUD", "Show the splits panel.",
+                () -> c.showSplitHud, v -> c.showSplitHud = v);
+        bool("Announce splits", "Say each split in chat as it is taken.",
+                () -> c.announceSplits, v -> c.announceSplits = v);
+        number("Own-biome catches", "Personal catches in a biome before its split counts as your PB.",
+                () -> c.ownBiomeMinCatches, v -> c.ownBiomeMinCatches = v, 1, 20);
+        group("Achievements");
+        bool("Achievements", "Unlock achievements as you play (/shiny achievements).",
+                () -> c.achievementsEnabled, v -> c.achievementsEnabled = v);
+        bool("Achievement sound", "Play a sound when an achievement unlocks.",
+                () -> c.achievementSound, v -> c.achievementSound = v);
+        bool("Achievements to party", "Also say \"Achievement unlocked: X!\" in party chat.",
+                () -> c.achievementsToParty, v -> c.achievementsToParty = v);
+
+        // ------------------------------------------------------------------ Party
+        section("Party");
+        group("Party chat");
+        bool("Instant party chat", "Send right away when nothing has been sent recently.",
+                () -> c.instantPartyChat, v -> c.instantPartyChat = v);
+        text("Critter channel", "Chat command for critter call-outs.",
+                () -> c.critterChannel, v -> c.critterChannel = v);
+        bool("Answer !missing", "Reply with your missing critters when the party asks.",
+                () -> c.respondToMissing, v -> c.respondToMissing = v);
+        text("Clear mark", "Symbol for a done biome in the !missing summary. Use a word if Hypixel "
+                + "strips the tick.",
+                () -> c.clearMark, v -> c.clearMark = v);
+        bool("Announce biome clear", "Say \"<biome> clear!\" once a biome is complete.",
+                () -> c.announceBiomeClear, v -> c.announceBiomeClear = v);
+        bool("Announce missing Macaw", "Say \"Forest 8/9, missing Macaw\" once only the Macaw is left.",
+                () -> c.announceMacawOnly, v -> c.announceMacawOnly = v);
+        bool("Announce all uniques", "Say \"All uniques caught!\" once every biome is complete.",
+                () -> c.announceAllUniques, v -> c.announceAllUniques = v);
+        group("Commands");
+        bool("!dt command", "Handle !dt [reason] in party chat: hold the Safari Manager after the run.",
+                () -> c.downtimeCommand, v -> c.downtimeCommand = v);
+        text("Downtime channel", "Chat command for the downtime announcement.",
+                () -> c.downtimeChannel, v -> c.downtimeChannel = v);
+        bool("!timer command", "Handle !timer <length> in party chat and call out expiry.",
+                () -> c.timerCommand, v -> c.timerCommand = v);
+        text("Timer channel", "Chat command for timer expiry call-outs.",
+                () -> c.timerChannel, v -> c.timerChannel = v);
+        if (!Edition.PUBLIC) {
+            bool("!hidey command", "Answer !hidey / !hideyho with plain coordinates.",
+                    () -> c.hideyhoCommand, v -> c.hideyhoCommand = v);
+            bool("Hidey slash commands", "Enable /sharehidey, /shide and /hide.",
+                    () -> c.hideyhoSlashCommands, v -> c.hideyhoSlashCommands = v);
+        }
+        group("Party sparklings");
+        bool("Party dex", "Look up each member's Sparkling Critterdex as they join.",
+                () -> c.partyDexEnabled, v -> c.partyDexEnabled = v);
+        bool("Post shared to party", "Announce the shared sparklings in party chat when the party fills.",
+                () -> c.partyDexAnnounce, v -> c.partyDexAnnounce = v);
+        bool("!shared command", "Answer !shared in party chat, even with the party dex off.",
+                () -> c.sharedCommand, v -> c.sharedCommand = v);
+        bool("Skip shared", "Leave sparklings the whole party has off the missing list and HUD.",
+                () -> c.partyDexSkipShared, v -> c.partyDexSkipShared = v);
+        number("!shared max", "Most sparklings !shared lists before \"+N more\".",
+                () -> c.sharedListMax, v -> c.sharedListMax = v, 1, 37);
+        text("Useful sparklings", "Comma-separated critters !shared reports (e.g. Macaw, Gemzie); !shared all ignores it.",
+                () -> c.usefulSparklingCritters, v -> c.usefulSparklingCritters = v);
+        group("Safari Manager");
+        bool("Guard Safari Manager", "Refuse the click until the whole party is here; sneak to bypass.",
+                () -> c.guardSafariManager, v -> c.guardSafariManager = v);
+        text("Manager name", "Nameplate text of the NPC to guard.",
+                () -> c.safariManagerName, v -> c.safariManagerName = v);
+        bool("Block on \"kick\"", "Also hold the manager shut when someone says kick in party chat.",
+                () -> c.blockOnKickCall, v -> c.blockOnKickCall = v);
+        number("Kick hold (s)", "How long a called kick keeps the manager blocked.",
+                () -> c.kickBlockSeconds, v -> c.kickBlockSeconds = v, 1, 600);
+        bool("Guard ticket item", "Also refuse the ticket itself, which is how a non-leader starts.",
+                () -> c.guardTicketItem, v -> c.guardTicketItem = v);
+        text("Ticket name", "Item-name text identifying a Safari ticket.",
+                () -> c.ticketItemName, v -> c.ticketItemName = v);
+        number("Presence radius", "How close a player must be to count as here.",
+                () -> c.presenceRadius, v -> c.presenceRadius = v, 2, 64);
+        group("Call-outs");
+        bool("Bird food call-outs", "Announce picking up bird food, and running out.",
+                () -> c.announceBirdFood, v -> c.announceBirdFood = v);
+        text("Bird food channel", "Chat command for bird food call-outs.",
+                () -> c.birdFoodChannel, v -> c.birdFoodChannel = v);
+        bool("Announce gems", "Say \"X Gem placed!\" when you place one.",
+                () -> c.announceGems, v -> c.announceGems = v);
+        text("Gem channel", "Chat command for gem call-outs.",
+                () -> c.gemChannel, v -> c.gemChannel = v);
+        bool("Watch NPC trades", "Detect hunter shard offers and relay them.",
+                () -> c.announceShardTrades, v -> c.announceShardTrades = v);
+        text("Trade channel", "Chat command for trade call-outs, e.g. pc.",
+                () -> c.shardTradeChannel, v -> c.shardTradeChannel = v);
+        bool("Title if affordable", "Title you when a called-out trade's cost is in your inventory.",
+                () -> c.titleWhenTradeAffordable, v -> c.titleWhenTradeAffordable = v);
+        bool("Out of capsules", "Tell the party when you use your last Critter Capsule.",
+                () -> c.announceOutOfCapsules, v -> c.announceOutOfCapsules = v);
+        text("Capsule channel", "Chat command for the out-of-capsules call-out.",
+                () -> c.capsuleChannel, v -> c.capsuleChannel = v);
+        group("Hotspots");
         bool("Relay hotspot", "Announce your hunting hotspot to chat.",
                 () -> c.announceHotspot, v -> c.announceHotspot = v);
-        text("Relay channel", "Chat command used to relay, e.g. pc / gc / ac.",
+        text("Hotspot channel", "Chat command used to relay, e.g. pc / gc / ac.",
                 () -> c.hotspotCommand, v -> c.hotspotCommand = v);
         bool("Split across party", "Give everyone a different hotspot automatically.",
                 () -> c.coordinateHotspots, v -> c.coordinateHotspots = v);
         number("Round resets (min)", "Forget claims this long after the last one.",
                 () -> c.hotspotRoundMinutes, v -> c.hotspotRoundMinutes = v, 1, 120);
+        group("Safari Join Assist");
+        text("Your role", "none / joiner (enters the Safari, then warps the party) / inviter (invites them back, gives leader).",
+                () -> c.safariAssistRole, v -> c.safariAssistRole = v);
+        text("Other player", "The other player's name. Leave blank to pick it up automatically from who leaves / whose party you join.",
+                () -> c.safariAssistPartner, v -> c.safariAssistPartner = v);
+        decimal("Delay (s)", "Seconds to wait before each invite, transfer or party message.",
+                () -> c.safariAssistDelaySeconds, v -> c.safariAssistDelaySeconds = v, 0.0, 10.0);
 
-        section("Bee nests");
+        // ------------------------------------------------------------------ Safari helpers
+        section("Safari helpers");
+        group("Bee nests");
         bool("Highlight nests", "Outline bee nests in the location below.",
                 () -> c.highlightBeeNests, v -> c.highlightBeeNests = v);
         text("Location", "Sidebar zone the highlight is limited to.",
@@ -248,32 +441,63 @@ public class ConfigScreen extends Screen {
                 () -> c.beeNestScanRadius, v -> c.beeNestScanRadius = v, 8, 256);
         bool("Through walls", "Draw nest outlines through terrain (nests never move, so this is allowed).",
                 () -> c.beeNestThroughWalls, v -> c.beeNestThroughWalls = v);
-        bool("Hive beacons", "Beacon the honeyhives that still have honey, while the contest is unfinished.",
-                () -> c.honeyHiveWaypoints, v -> c.honeyHiveWaypoints = v);
-        bool("Only when incomplete", "Hide the hive beacons once the contest is complete.",
-                () -> c.honeyHiveOnlyWhenIncomplete, v -> c.honeyHiveOnlyWhenIncomplete = v);
-        text("Hive colour", "Beacon colour as hex, e.g. 55FF55.",
-                () -> c.honeyHiveColor, v -> c.honeyHiveColor = v);
-        number("Hive beam height", "How tall the beacon beam is, in blocks.",
-                () -> c.honeyHiveBeamHeight, v -> c.honeyHiveBeamHeight = v, 1, 2048);
-        bool("Hive outline", "Also outline the hive block itself.",
-                () -> c.honeyHiveOutline, v -> c.honeyHiveOutline = v);
-        bool("Hive outline through walls", "Show the box on the hive block through terrain.",
-                () -> c.honeyHiveThroughWalls, v -> c.honeyHiveThroughWalls = v);
-        number("Hive range", "How far away a hive can be and still get a beacon.",
-                () -> c.honeyHiveRange, v -> c.honeyHiveRange = v, 16, 512);
-        bool("Refill countdown", "Over a hive you looted, show how long until it refills. Remembered across restarts.",
-                () -> c.honeyHiveShowRefill, v -> c.honeyHiveShowRefill = v);
-        bool("Nest survey", "Record fence+trapdoor bee nests to config/shinyhunter-nests.json.",
-                () -> c.surveyNests, v -> c.surveyNests = v);
-        text("Survey area", "Where the nest survey runs. Blank means anywhere in Skyblock.",
-                () -> c.surveyLocation, v -> c.surveyLocation = v);
+        text("Nest done critter", "Once caught, bee nest outlines change colour for the rest of the run.",
+                () -> c.beeNestStopCritter, v -> c.beeNestStopCritter = v);
+        bool("Hide nests when done", "Stop outlining nests once that critter is caught, rather than recolouring them.",
+                () -> c.hideNestsWhenDone, v -> c.hideNestsWhenDone = v);
+        text("Nest done colour", "Outline colour for nests after that critter is caught, e.g. FF4040.",
+                () -> c.beeNestDoneColor, v -> c.beeNestDoneColor = v);
         bool("Share emptied", "Announce emptied nests and hide ones the party emptied.",
                 () -> c.announceBeeEmptied, v -> c.announceBeeEmptied = v);
         text("Emptied channel", "Chat command for emptied call-outs.",
                 () -> c.beeEmptiedChannel, v -> c.beeEmptiedChannel = v);
+        group("Snoozling walls");
+        bool("Wall waypoints", "Mark the Snoozling walls still standing, through terrain, while in the Safari.",
+                () -> c.snoozlingWallWaypoints, v -> c.snoozlingWallWaypoints = v);
+        text("Wall waypoint colour", "Hex colour, e.g. FF55FF.",
+                () -> c.snoozlingWallColor, v -> c.snoozlingWallColor = v);
+        if (!Edition.PUBLIC) {
+            bool("Track walls", "Show how many Snoozling walls have been broken.",
+                    () -> c.trackSnoozlingWalls, v -> c.trackSnoozlingWalls = v);
+        }
+        group("Rockmites");
+        bool("Track rockmites", "Count mounds opened and Rockmites found.",
+                () -> c.trackRockmites, v -> c.trackRockmites = v);
+        number("Mounds per run", "How many mounds an instance has.",
+                () -> c.rockmiteMoundTotal, v -> c.rockmiteMoundTotal = v, 1, 200);
+        group("Hideyho & quests");
+        if (!Edition.PUBLIC) {
+            bool("Hidey inside/outside", "Title \"Hideyho inside!\" or \"outside!\" once it hides after the quest.",
+                    () -> c.hideyhoInsideOutside, v -> c.hideyhoInsideOutside = v);
+        }
+        bool("Click to accept", "Click anywhere with chat open to press the accept button. Use at your own risk.",
+                () -> c.acceptQuestClicks, v -> c.acceptQuestClicks = v);
+        text("Mob", "Whose dialogue prompt this applies to.",
+                () -> c.questMobName, v -> c.questMobName = v);
+        text("Accept button", "The option button to press.",
+                () -> c.questAcceptLabel, v -> c.questAcceptLabel = v);
+        group("Ground objects");
+        bool("Highlight objects", "Outline item displays paired with an interaction hitbox.",
+                () -> c.highlightGroundObjects, v -> c.highlightGroundObjects = v);
+        text("Colour (hex)", "Ground object outline colour.",
+                () -> c.groundObjectColor, v -> c.groundObjectColor = v);
+        number("Search radius", "How far to look for ground objects, in blocks.",
+                () -> c.groundObjectScanRadius, v -> c.groundObjectScanRadius = v, 8, 128);
+        if (!Edition.PUBLIC) {
+            bool("Through walls", "Draw ground object outlines through terrain.",
+                    () -> c.groundObjectThroughWalls, v -> c.groundObjectThroughWalls = v);
+        }
+        bool("Announce coords", "Print coordinates in chat when one is spotted.",
+                () -> c.groundObjectAnnounce, v -> c.groundObjectAnnounce = v);
+        group("Warden");
+        bool("Warden ready title", "Title when the warden's hitbox reaches full height.",
+                () -> c.announceWardenReady, v -> c.announceWardenReady = v);
+        number("Watch radius", "How far to watch for wardens, in blocks.",
+                () -> c.wardenScanRadius, v -> c.wardenScanRadius = v, 8, 128);
 
+        // ------------------------------------------------------------------ Floor drops
         section("Floor drops");
+        group("Highlight");
         bool("Highlight drops", "Outline clustered marker displays.",
                 () -> c.highlightFloorDrops, v -> c.highlightFloorDrops = v);
         text("Item token", "Item id a drop's displays carry.",
@@ -285,6 +509,11 @@ public class ConfigScreen extends Screen {
         if (!Edition.PUBLIC) {
             bool("Through walls", "Draw drop outlines through terrain.",
                     () -> c.floorDropThroughWalls, v -> c.floorDropThroughWalls = v);
+        }
+        if (!Edition.PUBLIC) {
+            group("Predictions");
+        }
+        if (!Edition.PUBLIC) {
             bool("Log drops", "Log each drop's item_display ids and what it gave, per run (shinyhunter-floor-drops.json).",
                     () -> c.floorDropLog, v -> c.floorDropLog = v);
             bool("Log drops in chat", "Also say each logged drop in chat.",
@@ -306,9 +535,10 @@ public class ConfigScreen extends Screen {
             bool("Only my biome", "Only show predicted drops in the biome you're in.",
                     () -> c.floorDropOnlyMyBiome, v -> c.floorDropOnlyMyBiome = v);
         }
-
         if (!Edition.PUBLIC) {
-            section("Floor drop types");
+            group("Drop types");
+        }
+        if (!Edition.PUBLIC) {
             bool("Lime Gem", "Show predicted Lime Gem drops.",
                     () -> c.fdLimeShow, v -> c.fdLimeShow = v);
             text("Lime Gem colour", "Highlight colour for Lime Gem drops (hex).",
@@ -369,87 +599,30 @@ public class ConfigScreen extends Screen {
                     () -> c.fdRandomColour, v -> c.fdRandomColour = v);
         }
 
-        section("Party coordination");
-        bool("!dt command", "Handle !dt [reason] in party chat: hold the Safari Manager after the run.",
-                () -> c.downtimeCommand, v -> c.downtimeCommand = v);
-        text("Downtime channel", "Chat command for the downtime announcement.",
-                () -> c.downtimeChannel, v -> c.downtimeChannel = v);
-        bool("!timer command", "Handle !timer <length> in party chat and call out expiry.",
-                () -> c.timerCommand, v -> c.timerCommand = v);
-        text("Timer channel", "Chat command for timer expiry call-outs.",
-                () -> c.timerChannel, v -> c.timerChannel = v);
-        bool("Bird food call-outs", "Announce picking up bird food, and running out.",
-                () -> c.announceBirdFood, v -> c.announceBirdFood = v);
-        text("Bird food channel", "Chat command for bird food call-outs.",
-                () -> c.birdFoodChannel, v -> c.birdFoodChannel = v);
-
-        section("Quest prompts");
-        bool("Click to accept", "Click anywhere with chat open to press the accept button. Use at your own risk.",
-                () -> c.acceptQuestClicks, v -> c.acceptQuestClicks = v);
-        text("Mob", "Whose dialogue prompt this applies to.",
-                () -> c.questMobName, v -> c.questMobName = v);
-        text("Accept button", "The option button to press.",
-                () -> c.questAcceptLabel, v -> c.questAcceptLabel = v);
-
-        section("Critters");
-        bool("Track critters", "Record which critters turn up on this Safari instance.",
-                () -> c.trackCritters, v -> c.trackCritters = v);
-        text("Run mode", "unique, fullclear or sparkling: what the missing panels, !m, splits and outlines go for. /shiny mode switches.",
-                () -> c.safariMode, v -> c.safariMode = v);
-        bool("Missing HUD panels", "One panel per biome listing what's still missing.",
-                () -> c.showCritterHud, v -> c.showCritterHud = v);
-        bool("Highlight missing only", "Outline critters still outstanding; drop each when caught.",
-                () -> c.highlightMissingCritters, v -> c.highlightMissingCritters = v);
-        text("Missing colour", "Outline colour for outstanding critters, e.g. FFC94A.",
-                () -> c.missingCritterColor, v -> c.missingCritterColor = v);
-        text("Nest done critter", "Once caught, bee nest outlines change colour for the rest of the run.",
-                () -> c.beeNestStopCritter, v -> c.beeNestStopCritter = v);
-        bool("Hide nests when done", "Stop outlining nests once that critter is caught, rather than recolouring them.",
-                () -> c.hideNestsWhenDone, v -> c.hideNestsWhenDone = v);
-        text("Nest done colour", "Outline colour for nests after that critter is caught, e.g. FF4040.",
-                () -> c.beeNestDoneColor, v -> c.beeNestDoneColor = v);
-        section("History & achievements");
-        bool("Save runs", "Record every Safari run for /shiny history: length, catches, shards, sparklings, splits.",
-                () -> c.runHistoryEnabled, v -> c.runHistoryEnabled = v);
-        bool("Import logs on launch", "Save runs from your last session's log when the game starts. Minecraft only keeps 7 logs a day.",
-                () -> c.autoImportLogs, v -> c.autoImportLogs = v);
-        bool("Coins at insta-sell", "Value shards at the bazaar's instant-sell price instead of the sell-offer price.",
-                () -> c.runCoinsInstaSell, v -> c.runCoinsInstaSell = v);
-        bool("Achievements", "Unlock achievements as you play (/shiny achievements).",
-                () -> c.achievementsEnabled, v -> c.achievementsEnabled = v);
-        bool("Achievement sound", "Play a sound when an achievement unlocks.",
-                () -> c.achievementSound, v -> c.achievementSound = v);
-        bool("Achievements to party", "Also say \"Achievement unlocked: X!\" in party chat.",
-                () -> c.achievementsToParty, v -> c.achievementsToParty = v);
-
-        section("Sparkling luck");
-        bool("Tickets since sparkling", "Count Safari tickets used since anyone in the party last caught a sparkling (HUD, chat on a catch, history).",
-                () -> c.trackTicketsSinceSparkling, v -> c.trackTicketsSinceSparkling = v);
-        number("Tickets so far", "Tickets used since the party's last sparkling. Set it by hand if you know it.",
-                () -> c.ticketsSinceSparkling, v -> c.ticketsSinceSparkling = v, 0, 100000);
-
-        section("Party sparklings");
-        bool("Party dex", "Look up each member's Sparkling Critterdex as they join.",
-                () -> c.partyDexEnabled, v -> c.partyDexEnabled = v);
-        bool("Post shared to party", "Announce the shared sparklings in party chat when the party fills.",
-                () -> c.partyDexAnnounce, v -> c.partyDexAnnounce = v);
-        bool("!shared command", "Answer !shared in party chat, even with the party dex off.",
-                () -> c.sharedCommand, v -> c.sharedCommand = v);
-        bool("Skip shared", "Leave sparklings the whole party has off the missing list and HUD.",
-                () -> c.partyDexSkipShared, v -> c.partyDexSkipShared = v);
-        if (!Edition.PUBLIC) {
-            // The public edition gets player data through the Shiny Hunter API and has no key.
-            text("Hypixel API key", "Your developer key from developer.hypixel.net. Never logged.",
-                    () -> c.hypixelApiKey, v -> c.hypixelApiKey = v);
-        }
-        text("Dex path", "Profile path to the Sparkling Critterdex, once known. Blank = discover.",
-                () -> c.sparklingDexPath, v -> c.sparklingDexPath = v);
-        number("!shared max", "Most sparklings !shared lists before \"+N more\".",
-                () -> c.sharedListMax, v -> c.sharedListMax = v, 1, 37);
-        text("Useful sparklings", "Comma-separated critters !shared reports (e.g. Macaw, Gemzie); !shared all ignores it.",
-                () -> c.usefulSparklingCritters, v -> c.usefulSparklingCritters = v);
-
-        section("Miria's Contest");
+        // ------------------------------------------------------------------ Honeyhives & contest
+        section("Honeyhives & contest");
+        group("Honeyhives");
+        bool("Hive beacons", "Beacon the honeyhives that still have honey, while the contest is unfinished.",
+                () -> c.honeyHiveWaypoints, v -> c.honeyHiveWaypoints = v);
+        bool("Only when incomplete", "Hide the hive beacons once the contest is complete.",
+                () -> c.honeyHiveOnlyWhenIncomplete, v -> c.honeyHiveOnlyWhenIncomplete = v);
+        text("Hive colour", "Beacon colour as hex, e.g. 55FF55.",
+                () -> c.honeyHiveColor, v -> c.honeyHiveColor = v);
+        number("Hive beam height", "How tall the beacon beam is, in blocks.",
+                () -> c.honeyHiveBeamHeight, v -> c.honeyHiveBeamHeight = v, 1, 2048);
+        bool("Hive outline", "Also outline the hive block itself.",
+                () -> c.honeyHiveOutline, v -> c.honeyHiveOutline = v);
+        bool("Hive outline through walls", "Show the box on the hive block through terrain.",
+                () -> c.honeyHiveThroughWalls, v -> c.honeyHiveThroughWalls = v);
+        number("Hive range", "How far away a hive can be and still get a beacon.",
+                () -> c.honeyHiveRange, v -> c.honeyHiveRange = v, 16, 512);
+        bool("Refill countdown", "Over a hive you looted, show how long until it refills. Remembered across restarts.",
+                () -> c.honeyHiveShowRefill, v -> c.honeyHiveShowRefill = v);
+        bool("Nest survey", "Record fence+trapdoor bee nests to config/shinyhunter-nests.json.",
+                () -> c.surveyNests, v -> c.surveyNests = v);
+        text("Survey area", "Where the nest survey runs. Blank means anywhere in Skyblock.",
+                () -> c.surveyLocation, v -> c.surveyLocation = v);
+        group("Miria's Contest");
         bool("Track contest", "Show whether this window's contest is complete.",
                 () -> c.trackContest, v -> c.trackContest = v);
         bool("Hide when complete", "Hide the panel once the contest is complete.",
@@ -475,141 +648,9 @@ public class ConfigScreen extends Screen {
         number("Sound volume %", "100 = one bell. 300 = three at once. Louder needs more copies, not a bigger number.",
                 () -> c.contestSoundVolume, v -> c.contestSoundVolume = v, 0, 999999);
 
-        section("Snoozling walls");
-        bool("Wall waypoints", "Mark the Snoozling walls still standing, through terrain, while in the Safari.",
-                () -> c.snoozlingWallWaypoints, v -> c.snoozlingWallWaypoints = v);
-        text("Wall waypoint colour", "Hex colour, e.g. FF55FF.",
-                () -> c.snoozlingWallColor, v -> c.snoozlingWallColor = v);
-        if (!Edition.PUBLIC) {
-            bool("Track walls", "Show how many Snoozling walls have been broken.",
-                    () -> c.trackSnoozlingWalls, v -> c.trackSnoozlingWalls = v);
-        }
-
-        section("Safari Join Assist");
-        text("Your role", "none / joiner (enters the Safari, then warps the party) / inviter (invites them back, gives leader).",
-                () -> c.safariAssistRole, v -> c.safariAssistRole = v);
-        text("Other player", "The other player's name. Leave blank to pick it up automatically from who leaves / whose party you join.",
-                () -> c.safariAssistPartner, v -> c.safariAssistPartner = v);
-        decimal("Delay (s)", "Seconds to wait before each invite, transfer or party message.",
-                () -> c.safariAssistDelaySeconds, v -> c.safariAssistDelaySeconds = v, 0.0, 10.0);
-
-        section("Rockmites");
-        bool("Track rockmites", "Count mounds opened and Rockmites found.",
-                () -> c.trackRockmites, v -> c.trackRockmites = v);
-        number("Mounds per run", "How many mounds an instance has.",
-                () -> c.rockmiteMoundTotal, v -> c.rockmiteMoundTotal = v, 1, 200);
-
-        section("Critter list");
-        buildCritterHudRows(c);
-
-        section("Timers and splits");
-        bool("Run timer", "Show the run clock.",
-                () -> c.showTimer, v -> c.showTimer = v);
-        bool("Track splits", "Record per-biome split times and compare against bests.",
-                () -> c.trackSplits, v -> c.trackSplits = v);
-        bool("Splits on HUD", "Show the splits panel.",
-                () -> c.showSplitHud, v -> c.showSplitHud = v);
-        bool("Announce splits", "Say each split in chat as it is taken.",
-                () -> c.announceSplits, v -> c.announceSplits = v);
-        number("Own-biome catches", "Personal catches in a biome before its split counts as your PB.",
-                () -> c.ownBiomeMinCatches, v -> c.ownBiomeMinCatches = v, 1, 20);
-
-        section("Safari manager");
-        bool("Guard Safari Manager", "Refuse the click until the whole party is here; sneak to bypass.",
-                () -> c.guardSafariManager, v -> c.guardSafariManager = v);
-        text("Manager name", "Nameplate text of the NPC to guard.",
-                () -> c.safariManagerName, v -> c.safariManagerName = v);
-        bool("Block on \"kick\"", "Also hold the manager shut when someone says kick in party chat.",
-                () -> c.blockOnKickCall, v -> c.blockOnKickCall = v);
-        number("Kick hold (s)", "How long a called kick keeps the manager blocked.",
-                () -> c.kickBlockSeconds, v -> c.kickBlockSeconds = v, 1, 600);
-        bool("Guard ticket item", "Also refuse the ticket itself, which is how a non-leader starts.",
-                () -> c.guardTicketItem, v -> c.guardTicketItem = v);
-        text("Ticket name", "Item-name text identifying a Safari ticket.",
-                () -> c.ticketItemName, v -> c.ticketItemName = v);
-        number("Presence radius", "How close a player must be to count as here.",
-                () -> c.presenceRadius, v -> c.presenceRadius = v, 2, 64);
-        if (!Edition.PUBLIC) {
-            bool("!hidey command", "Answer !hidey / !hideyho with plain coordinates.",
-                    () -> c.hideyhoCommand, v -> c.hideyhoCommand = v);
-        }
-        if (!Edition.PUBLIC) {
-            bool("Hidey slash commands", "Enable /sharehidey, /shide and /hide.",
-                    () -> c.hideyhoSlashCommands, v -> c.hideyhoSlashCommands = v);
-        }
-        if (!Edition.PUBLIC) {
-            bool("Hidey inside/outside", "Title \"Hideyho inside!\" or \"outside!\" once it hides after the quest.",
-                    () -> c.hideyhoInsideOutside, v -> c.hideyhoInsideOutside = v);
-        }
-        bool("Instant party chat", "Send right away when nothing has been sent recently.",
-                () -> c.instantPartyChat, v -> c.instantPartyChat = v);
-        bool("Announce gems", "Say \"X Gem placed!\" when you place one.",
-                () -> c.announceGems, v -> c.announceGems = v);
-        text("Gem channel", "Chat command for gem call-outs.",
-                () -> c.gemChannel, v -> c.gemChannel = v);
-        bool("Announce all uniques", "Say \"All uniques caught!\" once every biome is complete.",
-                () -> c.announceAllUniques, v -> c.announceAllUniques = v);
-        text("Clear mark", "Symbol for a done biome in the !missing summary. Use a word if Hypixel "
-                        + "strips the tick.",
-                () -> c.clearMark, v -> c.clearMark = v);
-        bool("Highlight shulkers", "Outline shulkers as \"Shulker\" until their name loads, then by name.",
-                () -> c.shulkerIsHideonfloor, v -> c.shulkerIsHideonfloor = v);
-        bool("Always highlight shulkers", "Keep shulkers outlined even once that critter is caught.",
-                () -> c.alwaysHighlightShulkers, v -> c.alwaysHighlightShulkers = v);
-        bool("Announce biome clear", "Say \"<biome> clear!\" once a biome is complete.",
-                () -> c.announceBiomeClear, v -> c.announceBiomeClear = v);
-        bool("Announce missing Macaw", "Say \"Forest 8/9, missing Macaw\" once only the Macaw is left.",
-                () -> c.announceMacawOnly, v -> c.announceMacawOnly = v);
-        bool("Answer !missing", "Reply with your missing critters when the party asks.",
-                () -> c.respondToMissing, v -> c.respondToMissing = v);
-        text("Critter channel", "Chat command for critter call-outs.",
-                () -> c.critterChannel, v -> c.critterChannel = v);
-
-        section("HUD");
-        if (!Edition.PUBLIC) {
-            text("Shader markers", "On-screen dots for highlights when shaders hide them: auto / always / never.",
-                    () -> c.shaderMarkers, v -> c.shaderMarkers = v);
-        }
-        bool("Show HUD", "Draw the HUD panels on screen.",
-                () -> c.showHud, v -> c.showHud = v);
-        number("HUD x", "Distance from the left edge, in pixels.",
-                () -> c.hudX, v -> c.hudX = v, 0, 2000);
-        number("HUD y", "Distance from the top edge, in pixels.",
-                () -> c.hudY, v -> c.hudY = v, 0, 2000);
-
-        section("Ground objects (rocks, cases)");
-        bool("Highlight objects", "Outline item displays paired with an interaction hitbox.",
-                () -> c.highlightGroundObjects, v -> c.highlightGroundObjects = v);
-        text("Colour (hex)", "Ground object outline colour.",
-                () -> c.groundObjectColor, v -> c.groundObjectColor = v);
-        number("Search radius", "How far to look for ground objects, in blocks.",
-                () -> c.groundObjectScanRadius, v -> c.groundObjectScanRadius = v, 8, 128);
-        if (!Edition.PUBLIC) {
-            bool("Through walls", "Draw ground object outlines through terrain.",
-                    () -> c.groundObjectThroughWalls, v -> c.groundObjectThroughWalls = v);
-        }
-        bool("Announce coords", "Print coordinates in chat when one is spotted.",
-                () -> c.groundObjectAnnounce, v -> c.groundObjectAnnounce = v);
-
-        section("Shard trades");
-        bool("Watch NPC trades", "Detect hunter shard offers and relay them.",
-                () -> c.announceShardTrades, v -> c.announceShardTrades = v);
-        text("Relay channel", "Chat command for trade call-outs, e.g. pc.",
-                () -> c.shardTradeChannel, v -> c.shardTradeChannel = v);
-        bool("Title if affordable", "Title you when a called-out trade's cost is in your inventory.",
-                () -> c.titleWhenTradeAffordable, v -> c.titleWhenTradeAffordable = v);
-        bool("Out of capsules", "Tell the party when you use your last Critter Capsule.",
-                () -> c.announceOutOfCapsules, v -> c.announceOutOfCapsules = v);
-        text("Capsule channel", "Chat command for the out-of-capsules call-out.",
-                () -> c.capsuleChannel, v -> c.capsuleChannel = v);
-
-        section("Warden");
-        bool("Warden ready title", "Title when the warden's hitbox reaches full height.",
-                () -> c.announceWardenReady, v -> c.announceWardenReady = v);
-        number("Watch radius", "How far to watch for wardens, in blocks.",
-                () -> c.wardenScanRadius, v -> c.wardenScanRadius = v, 8, 128);
-
-        section("Entity highlights");
+        // ------------------------------------------------------------------ Highlights
+        section("Highlights");
+        group("Entity highlights");
         bool("Highlight entities", "Outline the tracked entities below.",
                 () -> c.highlightEntities, v -> c.highlightEntities = v);
         bool("Name labels", "Float a name above matches that have no nametag of their own.",
@@ -630,45 +671,11 @@ public class ConfigScreen extends Screen {
                 () -> c.highlightIgnoreCapturing, v -> c.highlightIgnoreCapturing = v);
         bool("Match NBT too", "Also match item/NBT data for unnamed things like rocks.",
                 () -> c.highlightDeepScan, v -> c.highlightDeepScan = v);
-
-        section("Sparkling particles");
-        bool("Particle detection", "Treat a trail of these particles around a mob as a sparkling.",
-                () -> c.particleDetection, v -> c.particleDetection = v);
-        decimal("Trail radius", "How close to the mob a particle must be to count.",
-                () -> c.particleRadius, v -> c.particleRadius = v, 0.5, 16.0);
-        number("Trail threshold", "Particle packets in the window before it counts.",
-                () -> c.particleThreshold, v -> c.particleThreshold = v, 1, 500);
-        number("Trail window (s)", "How far back the trail is counted.",
-                () -> c.particleWindowSeconds, v -> c.particleWindowSeconds = v, 1, 5);
-        if (sectionMatches("Sparkling particles")) {
-            buildStringListRows(c.sparklingParticles, "particle", "minecraft:end_rod");
-        }
-
-        if (!Edition.PUBLIC) {
-            section("Sparkling textures");
-        }
-        if (!Edition.PUBLIC) {
-            bool("Texture detection", "Treat a sparkling-only skin texture as a sparkling.",
-                    () -> c.textureDetection, v -> c.textureDetection = v);
-        }
-        if (!Edition.PUBLIC && sectionMatches("Sparkling textures")) {
-            buildStringListRows(c.sparklingTextures, "texture hash", "");
-        }
-
-        // The public scanner hunts SPARKLING only, so the keyword list would be a dead switch there.
-        if (!Edition.PUBLIC) {
-            section("Hunt keywords");
-        }
-        if (!Edition.PUBLIC && sectionMatches("Hunt keywords")) {
-            buildKeywordRows(c);
-        }
-
-        section("Tracked entities");
+        group("Tracked entities");
         if (sectionMatches("Tracked entities")) {
             buildTrackerRows(c);
         }
-
-        section("Tracked blocks");
+        group("Tracked blocks");
         bool("Highlight blocks", "Outline the block types listed below.",
                 () -> c.highlightBlocks, v -> c.highlightBlocks = v);
         number("Search radius", "How far to look for tracked blocks, in blocks.",
@@ -1178,14 +1185,28 @@ public class ConfigScreen extends Screen {
     private void section(String title) {
         pendingSection = title;
         currentSection = title;
+        pendingGroup = null;
     }
 
-    /** Writes out the waiting heading, if any. Called just before the first row beneath it. */
+    /**
+     * A sub-heading within a section. MoulConfig shows each group as a collapsible accordion; this
+     * screen shows a smaller heading above the group's rows.
+     */
+    private void group(String title) {
+        pendingGroup = title;
+    }
+
+    /** Writes out the waiting headings, if any. Called just before the first row beneath them. */
     private void flushSection() {
         if (pendingSection != null) {
             rows.add(new Row(pendingSection, null, null, contentHeight, true));
             contentHeight += SECTION_HEIGHT;
             pendingSection = null;
+        }
+        if (pendingGroup != null) {
+            rows.add(new Row("§7▸ " + pendingGroup, null, null, contentHeight, true));
+            contentHeight += SECTION_HEIGHT;
+            pendingGroup = null;
         }
     }
 
