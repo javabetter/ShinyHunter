@@ -204,6 +204,16 @@ public final class SkyblockSidebar {
         return SAFARI_ISLAND.equalsIgnoreCase(islandName(client));
     }
 
+    /**
+     * True on the Safari island, and also when the tab list shows no area at all (it can be
+     * customised away), so detection doesn't silently stop for those players. False on any other
+     * named island, Torrhus Canyon's Critter Safari zone included.
+     */
+    public static boolean onSafariIslandOrUnknown(Minecraft client) {
+        String island = islandName(client);
+        return island == null || SAFARI_ISLAND.equalsIgnoreCase(island);
+    }
+
     public static String zoneName(Minecraft client) {
         String line = locationLine(client);
         return line.isEmpty() ? "" : line.replace(String.valueOf(ZONE_GLYPH), " ").trim();

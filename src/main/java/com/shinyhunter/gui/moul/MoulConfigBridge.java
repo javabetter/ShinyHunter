@@ -213,7 +213,9 @@ public final class MoulConfigBridge {
             for (Field option : category.getClass().getFields()) {
                 if (Modifier.isStatic(option.getModifiers())
                         || option.getAnnotation(io.github.notenoughupdates.moulconfig.annotations.ConfigOption.class) == null
-                        || option.getAnnotation(io.github.notenoughupdates.moulconfig.annotations.ConfigEditorButton.class) != null) {
+                        || option.getAnnotation(io.github.notenoughupdates.moulconfig.annotations.ConfigEditorButton.class) != null
+                        // An accordion header only groups options; it has no setting behind it.
+                        || option.getAnnotation(io.github.notenoughupdates.moulconfig.annotations.ConfigEditorAccordion.class) != null) {
                     continue;
                 }
                 try {

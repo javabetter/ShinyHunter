@@ -125,7 +125,8 @@ public final class ShinyScanner {
         if (!needles.isEmpty()) {
             findByKeyword(client, needles, matches);
         }
-        if (config.particleDetection) {
+        // A particle trail only means a sparkling on the Safari island itself.
+        if (config.particleDetection && SkyblockSidebar.onSafariIslandOrUnknown(client)) {
             findByParticles(client, config, matches);
         }
 
@@ -179,7 +180,10 @@ public final class ShinyScanner {
 
     /** True when the sidebar's zone row names the configured hunting area. */
     public static boolean inHuntArea(Minecraft client, ShinyConfig config) {
-        return SkyblockSidebar.isAtLocation(client, config.huntLocation);
+        // The hunt area's zone row, and the Safari island itself: Torrhus Canyon has a zone of the
+        // same name, and sparkling detection belongs to the island only.
+        return SkyblockSidebar.isAtLocation(client, config.huntLocation)
+                && SkyblockSidebar.onSafariIslandOrUnknown(client);
     }
 
     /** What's hunted right now: sparklings in the hunting area, nothing anywhere else. */
