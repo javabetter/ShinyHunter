@@ -427,6 +427,11 @@ public class ShinyHunterClient implements ClientModInitializer {
         context.getSource().sendFeedback(Component.literal(
                 "  §7safari area (incl. entrance): "
                         + (SkyblockSidebar.isAtOrWithin(client, config.huntLocation) ? "§ayes" : "§cno")));
+        String biome = client.player == null ? null : SafariBiomes.hypixelBiome(client.level, client.player.blockPosition());
+        context.getSource().sendFeedback(Component.literal("  §7biome: §f" + (biome == null ? "-" : "hypixel:" + biome)
+                + " §7· tab area: §f" + SkyblockSidebar.islandName(client)));
+        context.getSource().sendFeedback(Component.literal("  §7in the Safari (sparkling detection on): "
+                + (SafariBiomes.playerInSafari(client) ? "§ayes" : "§cno")));
         return Command.SINGLE_SUCCESS;
     }
 

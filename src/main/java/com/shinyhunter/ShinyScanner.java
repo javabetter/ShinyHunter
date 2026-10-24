@@ -126,7 +126,7 @@ public final class ShinyScanner {
             findByKeyword(client, needles, matches);
         }
         // A particle trail only means a sparkling on the Safari island itself.
-        if (config.particleDetection && SkyblockSidebar.onSafariIslandOrUnknown(client)) {
+        if (config.particleDetection && SafariBiomes.playerInSafari(client)) {
             findByParticles(client, config, matches);
         }
 
@@ -180,10 +180,10 @@ public final class ShinyScanner {
 
     /** True when the sidebar's zone row names the configured hunting area. */
     public static boolean inHuntArea(Minecraft client, ShinyConfig config) {
-        // The hunt area's zone row, and the Safari island itself: Torrhus Canyon has a zone of the
-        // same name, and sparkling detection belongs to the island only.
-        return SkyblockSidebar.isAtLocation(client, config.huntLocation)
-                && SkyblockSidebar.onSafariIslandOrUnknown(client);
+        // The Critter Safari, read from the world's own biomes (hypixel:forest and the rest). The
+        // sidebar zone row and tab-list area this used to read come and go with Hypixel's layout
+        // and players' tab settings, and left SPARKLING switched off inside the Safari.
+        return SafariBiomes.playerInSafari(client);
     }
 
     /** What's hunted right now: sparklings in the hunting area, nothing anywhere else. */
