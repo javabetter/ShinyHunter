@@ -173,7 +173,7 @@ public final class ShinyScanner {
         // and particles only. Both channels only mean anything on the Safari island: elsewhere a
         // statue wearing a sparkling skin would alert forever.
         if ((config.particleDetection || (config.textureDetection && !Edition.PUBLIC))
-                && SkyblockSidebar.onSafariIslandOrUnknown(client)) {
+                && SafariBiomes.playerInSafari(client)) {
             findBySignature(client, config, matches);
         }
 
@@ -247,6 +247,11 @@ public final class ShinyScanner {
             if (!(entity instanceof net.minecraft.world.entity.LivingEntity) && !display) {
                 continue;
             }
+            // Critters live in the four critter biomes; anything else wearing a sparkling skin or
+            // sitting in particles (a display in the middle area) isn't one.
+            if (!SafariBiomes.inCritterBiome(entity)) {
+                continue;
+            }
             boolean armourStand = entity instanceof net.minecraft.world.entity.decoration.ArmorStand;
 
             // Textures are checked on armour stands too: a sparkling critter's model IS an armour
@@ -311,10 +316,10 @@ public final class ShinyScanner {
 
     /** True when the sidebar's zone row names the configured hunting area. */
     public static boolean inHuntArea(Minecraft client, ShinyConfig config) {
-        // The hunt area's zone row, and the Safari island itself: Torrhus Canyon has a zone of the
-        // same name, and sparkling detection belongs to the island only.
-        return SkyblockSidebar.isAtLocation(client, config.huntLocation)
-                && SkyblockSidebar.onSafariIslandOrUnknown(client);
+        // The Critter Safari, read from the world's own biomes (hypixel:forest and the rest). The
+        // sidebar zone row and tab-list area this used to read come and go with Hypixel's layout
+        // and players' tab settings, and left SPARKLING switched off inside the Safari.
+        return SafariBiomes.playerInSafari(client);
     }
 
     /**
