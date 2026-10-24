@@ -578,7 +578,6 @@ public final class ShinyConfig {
      * the one hash Skyblocker uses for the same purpose.
      */
     public List<String> sparklingTextures = new ArrayList<>(List.of(
-            "5dbaab74d1acd0abe9d04abe9928725de5d4495fcb63b647228caf6944c20800",   // Duplico (Skyblocker)
             "bede15b78c9a066ccef64a90ff670f95fdfca52d40d5879b1d17929bb632cc31")); // Driftling (entity dump)
 
     // ---------------------------------------------------------------- party dex
@@ -1175,9 +1174,11 @@ public final class ShinyConfig {
                     }
                     if (loaded.sparklingTextures == null) {
                         loaded.sparklingTextures = new ArrayList<>(List.of(
-                                "5dbaab74d1acd0abe9d04abe9928725de5d4495fcb63b647228caf6944c20800",
                                 "bede15b78c9a066ccef64a90ff670f95fdfca52d40d5879b1d17929bb632cc31"));
                     }
+                    // The old default list carried the Rockmite mound skin as a "Duplico"; drop it.
+                    loaded.sparklingTextures.removeIf(hash -> hash != null
+                            && SparklingSkins.NOT_SPARKLING.contains(hash.trim().toLowerCase()));
                     // The original defaults (8 in 3s at 2.5 blocks) were a guess that a real
                     // trail never reaches; configs still carrying them get the measured ones.
                     if (loaded.particleThreshold == 8 && loaded.particleWindowSeconds == 3) {

@@ -273,6 +273,9 @@ public final class ShinyScanner {
                 }
                 boolean hit = false;
                 for (String hash : hashes) {
+                    if (SparklingSkins.NOT_SPARKLING.contains(hash)) {
+                        continue; // a look-alike, e.g. the Rockmite mound skin
+                    }
                     for (String wanted : textures) {
                         if (!wanted.isBlank() && hash.startsWith(wanted.trim().toLowerCase())) {
                             hit = true;

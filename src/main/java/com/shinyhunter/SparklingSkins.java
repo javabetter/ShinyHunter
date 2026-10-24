@@ -11,6 +11,9 @@ import java.util.Set;
  * <p>Collected from live sparklings (the "Sparkling Critter Skins" sheet). Tepid has no skin of its
  * own and isn't here. Shyworm is made of several parts with their own skins; any of them counts.
  * The user's own list in the settings ({@code sparklingTextures}) is still checked on top of this.
+ *
+ * <p>{@link #NOT_SPARKLING} lists skins that look like a sparkling's but aren't: never matched, even
+ * from the user's list.
  */
 public final class SparklingSkins {
 
@@ -24,7 +27,6 @@ public final class SparklingSkins {
             Map.entry("94e547d7e6e49fdb30e6902441b3233a851df28b0ade5d1b2bb07b638484efb7", "Doomspiral"),
             Map.entry("bede15b78c9a066ccef64a90ff670f95fdfca52d40d5879b1d17929bb632cc31", "Driftling"),
             Map.entry("b6739f6e042359625362fe8f91c1f4ea7ecb5c1e4b1cde5c647d91700946d625", "Duplico"),
-            Map.entry("5dbaab74d1acd0abe9d04abe9928725de5d4495fcb63b647228caf6944c20800", "Duplico"), // Skyblocker's
             Map.entry("9fc70cceb1e084e6e89c49a6076721158bfbba29cf7fd94da6986d46771f1d11", "Flitter"),
             Map.entry("a11d555d393d73c6caec0eee3eb7af47d418538c0d3357a241730855c1ce8f81", "Fluffling"),
             Map.entry("5a2656ec0fd3b43cc3a98993aa1ddc31f6b1dc2d353b42ad2433dbe3d650abe", "Foxtrot"),
@@ -54,6 +56,14 @@ public final class SparklingSkins {
             Map.entry("5f0ccf4a99ac797806ce0982945f3f35414332f9ef082e08638bf11ed2dbad38", "Troodon"),
             Map.entry("f18086a7f9676353040ee3946019b7c68aaa1137b7d03aa3d185466cef6593d6", "Woodchucker"),
             Map.entry("14ee5220dfeb845e495883241908ff8dea380f23a74522b673db3ae2523367ff", "Wumpa"));
+
+    /**
+     * Skins worn by things that aren't sparklings. 5dbaab74… was taken from Skyblocker as the
+     * sparkling Duplico, but in the Safari it's the Rockmite mounds (the rocks/cases) — every mound
+     * alerted as a sparkling Duplico.
+     */
+    public static final java.util.Set<String> NOT_SPARKLING = java.util.Set.of(
+            "5dbaab74d1acd0abe9d04abe9928725de5d4495fcb63b647228caf6944c20800");
 
     private SparklingSkins() {
     }
