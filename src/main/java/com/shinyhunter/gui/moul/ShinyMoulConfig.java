@@ -132,6 +132,7 @@ public class ShinyMoulConfig extends Config {
             "openSparklingTextures",
             "scanEntityData",
             "shaderMarkers",
+            "sparklingDiffDebug",
             "textureDetection",
             "trackSnoozlingWalls");
 
@@ -324,6 +325,12 @@ public class ShinyMoulConfig extends Config {
         @ConfigOption(name = "Deep rescan (s)", desc = "How long a deep scan result is reused per entity.")
         @ConfigEditorSlider(minValue = 1f, maxValue = 60f, minStep = 1f)
         public int deepScanSeconds;
+
+        @Expose
+        @ConfigAccordionId(id = 0)
+        @ConfigOption(name = "Ticket diff test", desc = "Debug: compare all entity data before and after a ticket, and alert if it changed. /shiny sparkdiff shows the results.")
+        @ConfigEditorBoolean
+        public boolean sparklingDiffDebug;
 
         @Expose
         @ConfigOption(name = "Sparkling particles", desc = "")

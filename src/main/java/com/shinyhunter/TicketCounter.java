@@ -35,6 +35,20 @@ public final class TicketCounter {
         });
     }
 
+    /** Whether this plain-text chat line is the Safari Manager waving someone through. */
+    public static boolean isTicketLine(String text) {
+        if (!text.startsWith(MANAGER)) {
+            return false;
+        }
+        String said = text.substring(MANAGER.length()).trim();
+        for (String line : TICKET_LINES) {
+            if (said.equals(line)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static void handle(Component message) {
         ShinyConfig config = ShinyConfig.get();
         if (!config.trackTicketsSinceSparkling) {

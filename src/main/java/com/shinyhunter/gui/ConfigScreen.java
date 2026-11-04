@@ -249,6 +249,8 @@ public class ConfigScreen extends Screen {
                     () -> c.scanEntityData, v -> c.scanEntityData = v);
             number("Deep rescan (s)", "How long a deep scan result is reused per entity.",
                     () -> c.deepScanSeconds, v -> c.deepScanSeconds = v, 1, 60);
+            bool("Ticket diff test", "Debug: compare all entity data before and after a ticket, and alert if it changed. /shiny sparkdiff shows the results.",
+                    () -> c.sparklingDiffDebug, v -> c.sparklingDiffDebug = v);
         }
         group("Sparkling particles");
         bool("Particle detection", "Treat a trail of these particles around a mob as a sparkling.",

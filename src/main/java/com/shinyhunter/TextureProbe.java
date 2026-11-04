@@ -61,6 +61,13 @@ public final class TextureProbe {
         return hashes;
     }
 
+    /** The skin hashes on one profile, such as a player-list entry. */
+    public static Set<String> hashesOf(GameProfile profile) {
+        Set<String> hashes = new LinkedHashSet<>();
+        collect(profile, hashes);
+        return hashes;
+    }
+
     private static void collect(ItemStack stack, Set<String> into) {
         if (stack == null || stack.isEmpty()) {
             return;

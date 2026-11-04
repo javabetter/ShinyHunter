@@ -569,6 +569,9 @@ public final class ShinyConfig {
     /** How far back the trail is counted, in seconds. */
     public int particleWindowSeconds = 5;
 
+    /** Debug: compare all entity data around tickets, and say when a sparkling looks likely. */
+    public boolean sparklingDiffDebug = false;
+
     /** Treat a sparkling-only skin texture as a sparkling — how Hideyho gives itself away. */
     public boolean textureDetection = true;
 

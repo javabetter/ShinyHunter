@@ -412,6 +412,7 @@ public final class ShinyScanner {
             }
         }
         if (sparkling) {
+            SparklingDiff.sparklingSeen(SKIN_CRITTERS.getOrDefault(entity.getId(), name));
             announceSparkling(client, config, name, pos, distance, reason);
         } else {
             // The public edition says what was seen, not where: it only alerts on something in

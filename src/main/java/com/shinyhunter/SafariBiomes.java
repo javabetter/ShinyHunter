@@ -71,9 +71,20 @@ public final class SafariBiomes {
         if (island != null && !island.toLowerCase().contains("safari")) {
             return false;
         }
+        return nearCritterBiome(client, REACH);
+    }
+
+    /**
+     * A critter biome under the player or within this reach, whatever the tab list says: it can
+     * still name the previous island for a moment after joining.
+     */
+    public static boolean nearCritterBiome(Minecraft client, int reach) {
+        if (client.level == null || client.player == null) {
+            return false;
+        }
         BlockPos at = client.player.blockPosition();
-        for (int dx = -REACH; dx <= REACH; dx += REACH) {
-            for (int dz = -REACH; dz <= REACH; dz += REACH) {
+        for (int dx = -reach; dx <= reach; dx += reach) {
+            for (int dz = -reach; dz <= reach; dz += reach) {
                 String biome = hypixelBiome(client.level, at.offset(dx, 0, dz));
                 if (biome != null && CRITTER_BIOMES.contains(biome)) {
                     return true;

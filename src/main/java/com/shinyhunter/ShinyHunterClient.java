@@ -53,6 +53,7 @@ public class ShinyHunterClient implements ClientModInitializer {
         if (!Edition.PUBLIC) {
             ClientTickEvents.END_CLIENT_TICK.register(FloorDropLog::onClientTick);
             ClientTickEvents.END_CLIENT_TICK.register(FloorDropView::onClientTick);
+            ClientTickEvents.END_CLIENT_TICK.register(SparklingDiff::onClientTick);
         }
         ClientTickEvents.END_CLIENT_TICK.register(GroundObjectHighlighter::onClientTick);
         ClientTickEvents.END_CLIENT_TICK.register(WaypointManager::onClientTick);
@@ -106,6 +107,7 @@ public class ShinyHunterClient implements ClientModInitializer {
         HiveBeacons.register();
         if (!Edition.PUBLIC) {
             FloorDropLog.register(); // which item_display group each floor drop was, per run
+            SparklingDiff.register(); // the before/after-ticket entity comparison, when switched on
             GroundObjectHighlighter.register(); // logs what a found Duplico was, to tell it from rocks
             HideyhoLocator.register();
             HideyhoSpotter.register();
@@ -203,6 +205,12 @@ public class ShinyHunterClient implements ClientModInitializer {
                 .then(literal("resetpb").executes(ShinyHunterClient::resetBests))
                 .then(literal("zone").executes(ShinyHunterClient::showZone))
                 .then(literal("skins").executes(ShinyHunterClient::showSkins))
+                .then(literal("sparkdiff")
+                        .executes(c -> lines(c, SparklingDiff.status()))
+                        .then(literal("on").executes(c -> lines(c, SparklingDiff.setEnabled(true))))
+                        .then(literal("off").executes(c -> lines(c, SparklingDiff.setEnabled(false))))
+                        .then(literal("test").executes(c -> lines(c, SparklingDiff.test())))
+                        .then(literal("snap").executes(c -> lines(c, SparklingDiff.snap()))))
                 .then(literal("mode")
                         .executes(c -> showMode(c, SafariMode.select(SafariMode.current().next())))
                         .then(literal("unique").executes(c -> showMode(c, SafariMode.select(SafariMode.UNIQUE))))
@@ -532,6 +540,13 @@ public class ShinyHunterClient implements ClientModInitializer {
             context.getSource().sendFeedback(Component.literal("  §7No entity with a skin nearby."));
         } else if (found > 12) {
             context.getSource().sendFeedback(Component.literal("  §8+" + (found - 12) + " more in latest.log"));
+        }
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private static int lines(CommandContext<FabricClientCommandSource> context, java.util.List<String> lines) {
+        for (String line : lines) {
+            context.getSource().sendFeedback(Component.literal(line));
         }
         return Command.SINGLE_SUCCESS;
     }
