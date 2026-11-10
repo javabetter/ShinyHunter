@@ -39,7 +39,7 @@ import java.util.regex.Pattern;
  * the server says {@code FLOOR DROP! You found <item> on the ground!}, the drop is matched to the
  * group you clicked just before (or, failing that, the group nearest you) and written down with its
  * ids, position and biome. Every group seen is kept too, picked up or not, so a run's file shows all
- * its drops. Everything goes to {@code config/shinyhunter-floor-drops.json}, one entry per run.
+ * its drops. All of it is kept in memory for the current run only; nothing is written to disk.
  *
  * <p><b>Telling what a drop is before it's picked up.</b> Logged runs showed the server spawns a run's
  * floor drops in a fixed order, so sorted by entity id they are always: 6 gems (Lime, Purple,
@@ -68,7 +68,6 @@ public final class FloorDropLog {
     /** A group that vanished this recently can still be the one just picked up. */
     private static final long GONE_GRACE_MILLIS = 3_000L;
 
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
 
     // ------------------------------------------------------------------ saved shape
 
@@ -120,12 +119,6 @@ public final class FloorDropLog {
         public List<Seen> groups = new ArrayList<>();
     }
 
-    private static final class Data {
-        String note = "Floor drops per run: each drop's item_display entity ids (three consecutive), position and"
-                + " what it gave. Written by Shiny Hunter.";
-        List<RunLog> runs = new ArrayList<>();
-    }
-
     // ------------------------------------------------------------------ state
 
     private static final class Live {
@@ -137,7 +130,6 @@ public final class FloorDropLog {
         }
     }
 
-    private static Data data;
     private static RunLog current;
     /** Group key (first id) -> the group, this run. */
     private static final Map<Integer, Live> GROUPS = new LinkedHashMap<>();
@@ -185,7 +177,7 @@ public final class FloorDropLog {
     }
 
     private static void clicked(Vec3 where, String what) {
-        if (!ShinyConfig.get().floorDropLog) {
+        if (!ShinyConfig.get().floorDropPredict) {
             return;
         }
         clickedAt = where;
@@ -197,7 +189,7 @@ public final class FloorDropLog {
 
     public static void onClientTick(Minecraft client) {
         ShinyConfig config = ShinyConfig.get();
-        if (!config.floorDropLog || client.level == null || client.player == null) {
+        if (!config.floorDropPredict || client.level == null || client.player == null) {
             return;
         }
         RunHistory.Run run = RunHistory.current();
@@ -216,14 +208,10 @@ public final class FloorDropLog {
     }
 
     private static void startRun(long start) {
-        load();
         current = new RunLog();
         current.start = start;
         current.started = java.time.Instant.ofEpochMilli(start).toString();
-        data.runs.add(current);
         GROUPS.clear();
-        fillRunNumbers();
-        save();
     }
 
     private static void scan(Minecraft client) {
@@ -277,7 +265,6 @@ public final class FloorDropLog {
         }
         if (added) {
             repredict();
-            save();
         }
     }
 
@@ -405,7 +392,7 @@ public final class FloorDropLog {
     // ------------------------------------------------------------------ pickups
 
     private static void handle(Component message) {
-        if (!ShinyConfig.get().floorDropLog || current == null) {
+        if (!ShinyConfig.get().floorDropPredict || current == null) {
             return;
         }
         String text = EntityDataProbe.stripFormatting(message.getString()).trim();
@@ -453,8 +440,6 @@ public final class FloorDropLog {
         }
         if (match == null) {
             current.unmatched.add(drop.time + " " + text + (drop.clicked == null ? "" : " (clicked " + drop.clicked + ")"));
-            ShinyHunterClient.LOGGER.info("Floor drop not matched to an item display group: {}", text);
-            save();
             return;
         }
         Seen seen = match.seen;
@@ -472,13 +457,6 @@ public final class FloorDropLog {
                     : seen.predicted.equals(drop.item);
         }
         current.drops.add(drop);
-        save();
-        ShinyHunterClient.LOGGER.info("Floor drop {} <- item displays {}-{} at {}, {}, {} ({}), predicted {}", seen.gave, seen.ids[0], seen.ids[2],
-                seen.x, seen.y, seen.z, drop.matchedBy, seen.predicted);
-        if (ShinyConfig.get().floorDropLogChat) {
-            client.player.sendSystemMessage(Component.literal("§b[Shiny Hunter] §7Floor drop §f" + seen.gave + "§7 ← #"
-                    + seen.ids[0] + "-" + seen.ids[2] + " §8(" + drop.matchedBy + ")"));
-        }
     }
 
     private static boolean isFixedItem(String item) {
@@ -511,12 +489,10 @@ public final class FloorDropLog {
 
     // ------------------------------------------------------------------ command
 
-    /** {@code /shiny floordrops}: this run so far, and where the file is. */
+    /** {@code /shiny floordrops}: this run's drops and how the predictions did. */
     public static List<String> status() {
-        load();
         List<String> lines = new ArrayList<>();
-        lines.add("§b§lFloor drop log §7— " + (ShinyConfig.get().floorDropLog ? "§aon" : "§coff")
-                + "§7, " + data.runs.size() + " run(s) logged");
+        lines.add("§b§lFloor drop predictions §7— " + (ShinyConfig.get().floorDropPredict ? "§aon" : "§coff"));
         if (current != null) {
             lines.add("§7This run: §f" + current.groups.size() + "§7 groups seen, §f" + current.drops.size()
                     + "§7 picked up, §f" + current.unmatched.size() + "§7 unmatched");
@@ -529,64 +505,13 @@ public final class FloorDropLog {
                 }
             }
             lines.add("§7Predictions right: §f" + right + "/" + checked);
+            // Only the misses: a full list of every pickup got long fast.
             for (Drop drop : current.drops) {
-                lines.add("  " + (Boolean.FALSE.equals(drop.predictedRight) ? "§c✗ " : "§a✓ ") + "§f" + drop.item
-                        + (drop.amount > 1 ? " x" + drop.amount : "") + " §7#" + drop.ids[0] + "-" + drop.ids[2]
-                        + " §8predicted " + drop.predicted + " (" + drop.matchedBy + ")");
-            }
-        }
-        lines.add("§8" + path());
-        return lines;
-    }
-
-    // ------------------------------------------------------------------ storage
-
-    /** Fills in run numbers once the run history has saved them. */
-    private static void fillRunNumbers() {
-        for (RunLog log : data.runs) {
-            if (log.run != null) {
-                continue;
-            }
-            for (RunHistory.Run run : RunHistory.runs()) {
-                if (run.start == log.start) {
-                    log.run = run.number;
-                    break;
+                if (Boolean.FALSE.equals(drop.predictedRight)) {
+                    lines.add("  §c✗ §f" + drop.item + " §8predicted " + drop.predicted);
                 }
             }
         }
-        // A run with nothing seen at all (a hop through the entrance) isn't worth keeping.
-        data.runs.removeIf(log -> log != current && log.groups.isEmpty() && log.drops.isEmpty() && log.unmatched.isEmpty());
-    }
-
-    private static Path path() {
-        return FabricLoader.getInstance().getConfigDir().resolve("shinyhunter-floor-drops.json");
-    }
-
-    private static void load() {
-        if (data != null) {
-            return;
-        }
-        data = new Data();
-        Path file = path();
-        if (!Files.exists(file)) {
-            return;
-        }
-        try {
-            Data read = GSON.fromJson(Files.readString(file, StandardCharsets.UTF_8), Data.class);
-            if (read != null && read.runs != null) {
-                data = read;
-            }
-        } catch (IOException | RuntimeException e) {
-            ShinyHunterClient.LOGGER.warn("Couldn't read the floor drop log — starting a new one", e);
-        }
-    }
-
-    private static void save() {
-        try {
-            Files.createDirectories(path().getParent());
-            Files.writeString(path(), GSON.toJson(data), StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            ShinyHunterClient.LOGGER.warn("Couldn't save the floor drop log", e);
-        }
+        return lines;
     }
 }

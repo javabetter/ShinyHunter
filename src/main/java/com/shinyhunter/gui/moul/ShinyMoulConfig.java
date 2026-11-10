@@ -115,8 +115,6 @@ public class ShinyMoulConfig extends Config {
             "floorDropFakeOutline",
             "floorDropLabelColour",
             "floorDropLabelScale",
-            "floorDropLog",
-            "floorDropLogChat",
             "floorDropOnlyMyBiome",
             "floorDropPredict",
             "floorDropRange",
@@ -1082,19 +1080,7 @@ public class ShinyMoulConfig extends Config {
 
         @Expose
         @ConfigAccordionId(id = 1)
-        @ConfigOption(name = "Log drops", desc = "Log each drop's item_display ids and what it gave, per run (shinyhunter-floor-drops.json).")
-        @ConfigEditorBoolean
-        public boolean floorDropLog;
-
-        @Expose
-        @ConfigAccordionId(id = 1)
-        @ConfigOption(name = "Log drops in chat", desc = "Also say each logged drop in chat.")
-        @ConfigEditorBoolean
-        public boolean floorDropLogChat;
-
-        @Expose
-        @ConfigAccordionId(id = 1)
-        @ConfigOption(name = "Predict drops", desc = "Label each drop with what it will give, from the run's spawn order (needs Log drops).")
+        @ConfigOption(name = "Predict drops", desc = "Label each drop with what it will give, from the run's spawn order.")
         @ConfigEditorBoolean
         public boolean floorDropPredict;
 

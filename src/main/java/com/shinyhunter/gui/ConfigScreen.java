@@ -516,11 +516,7 @@ public class ConfigScreen extends Screen {
             group("Predictions");
         }
         if (!Edition.PUBLIC) {
-            bool("Log drops", "Log each drop's item_display ids and what it gave, per run (shinyhunter-floor-drops.json).",
-                    () -> c.floorDropLog, v -> c.floorDropLog = v);
-            bool("Log drops in chat", "Also say each logged drop in chat.",
-                    () -> c.floorDropLogChat, v -> c.floorDropLogChat = v);
-            bool("Predict drops", "Label each drop with what it will give, from the run's spawn order (needs Log drops).",
+            bool("Predict drops", "Label each drop with what it will give, from the run's spawn order.",
                     () -> c.floorDropPredict, v -> c.floorDropPredict = v);
             decimal("Label size", "Size of the predicted drop labels.",
                     () -> c.floorDropLabelScale, v -> c.floorDropLabelScale = v, 0.3, 4.0);
