@@ -569,6 +569,9 @@ public final class ShinyConfig {
     /** How far back the trail is counted, in seconds. */
     public int particleWindowSeconds = 5;
 
+    /** Label Scrappies with the food they want, learned from feeding them. */
+    public boolean scrappyFood = true;
+
     /** Debug: compare all entity data around tickets, and say when a sparkling looks likely. */
     public boolean sparklingDiffDebug = false;
 

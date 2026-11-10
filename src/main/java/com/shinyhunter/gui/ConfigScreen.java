@@ -467,6 +467,13 @@ public class ConfigScreen extends Screen {
                 () -> c.trackRockmites, v -> c.trackRockmites = v);
         number("Mounds per run", "How many mounds an instance has.",
                 () -> c.rockmiteMoundTotal, v -> c.rockmiteMoundTotal = v, 1, 200);
+        if (!Edition.PUBLIC) {
+            group("Scrappy");
+        }
+        if (!Edition.PUBLIC) {
+            bool("Scrappy food", "Label each Scrappy with the food it wants once fed, and predict it for ones that look the same. /shiny scrappy",
+                    () -> c.scrappyFood, v -> c.scrappyFood = v);
+        }
         group("Hideyho & quests");
         if (!Edition.PUBLIC) {
             bool("Hidey inside/outside", "Title \"Hideyho inside!\" or \"outside!\" once it hides after the quest.",

@@ -77,6 +77,7 @@ public class ShinyMoulConfig extends Config {
     public static final Set<String> PRIVATE_ONLY = Set.of(
             "accordionFloorDropsDropTypes",
             "accordionFloorDropsPredictions",
+            "accordionSafariHelpersScrappy",
             "accordionSparklingDetectionHuntKeywords",
             "accordionSparklingDetectionSparklingTextures",
             "blockThroughWalls",
@@ -129,6 +130,7 @@ public class ShinyMoulConfig extends Config {
             "openHuntKeywords",
             "openSparklingTextures",
             "scanEntityData",
+            "scrappyFood",
             "shaderMarkers",
             "sparklingDiffDebug",
             "textureDetection",
@@ -954,82 +956,93 @@ public class ShinyMoulConfig extends Config {
         public int rockmiteMoundTotal;
 
         @Expose
-        @ConfigOption(name = "Hideyho & quests", desc = "")
+        @ConfigOption(name = "Scrappy", desc = "")
         @ConfigEditorAccordion(id = 3)
-        public boolean accordionSafariHelpersHideyhoQuests = false;
+        public boolean accordionSafariHelpersScrappy = false;
 
         @Expose
         @ConfigAccordionId(id = 3)
+        @ConfigOption(name = "Scrappy food", desc = "Label each Scrappy with the food it wants once fed, and predict it for ones that look the same. /shiny scrappy")
+        @ConfigEditorBoolean
+        public boolean scrappyFood;
+
+        @Expose
+        @ConfigOption(name = "Hideyho & quests", desc = "")
+        @ConfigEditorAccordion(id = 4)
+        public boolean accordionSafariHelpersHideyhoQuests = false;
+
+        @Expose
+        @ConfigAccordionId(id = 4)
         @ConfigOption(name = "Hidey inside/outside", desc = "Title \"Hideyho inside!\" or \"outside!\" once it hides after the quest.")
         @ConfigEditorBoolean
         public boolean hideyhoInsideOutside;
 
         @Expose
-        @ConfigAccordionId(id = 3)
+        @ConfigAccordionId(id = 4)
         @ConfigOption(name = "Click to accept", desc = "Click anywhere with chat open to press the accept button. Use at your own risk.")
         @ConfigEditorBoolean
         public boolean acceptQuestClicks;
 
         @Expose
-        @ConfigAccordionId(id = 3)
+        @ConfigAccordionId(id = 4)
         @ConfigOption(name = "Mob", desc = "Whose dialogue prompt this applies to.")
         @ConfigEditorText
         public String questMobName = "";
 
         @Expose
-        @ConfigAccordionId(id = 3)
+        @ConfigAccordionId(id = 4)
         @ConfigOption(name = "Accept button", desc = "The option button to press.")
         @ConfigEditorText
         public String questAcceptLabel = "";
 
         @Expose
         @ConfigOption(name = "Ground objects", desc = "")
-        @ConfigEditorAccordion(id = 4)
+        @ConfigEditorAccordion(id = 5)
         public boolean accordionSafariHelpersGroundObjects = false;
 
         @Expose
-        @ConfigAccordionId(id = 4)
+        @ConfigAccordionId(id = 5)
         @ConfigOption(name = "Highlight objects", desc = "Outline item displays paired with an interaction hitbox.")
         @ConfigEditorBoolean
         public boolean highlightGroundObjects;
 
         @Expose
-        @ConfigAccordionId(id = 4)
+        @ConfigAccordionId(id = 5)
         @ConfigOption(name = "Colour (hex)", desc = "Ground object outline colour.")
         @ConfigEditorText
         public String groundObjectColor = "";
 
         @Expose
-        @ConfigAccordionId(id = 4)
+        @ConfigAccordionId(id = 5)
         @ConfigOption(name = "Search radius", desc = "How far to look for ground objects, in blocks.")
         @ConfigEditorSlider(minValue = 8f, maxValue = 128f, minStep = 1f)
         public int groundObjectScanRadius;
 
         @Expose
-        @ConfigAccordionId(id = 4)
+        @ConfigAccordionId(id = 5)
         @ConfigOption(name = "Through walls", desc = "Draw ground object outlines through terrain.")
         @ConfigEditorBoolean
         public boolean groundObjectThroughWalls;
 
         @Expose
-        @ConfigAccordionId(id = 4)
+        @ConfigAccordionId(id = 5)
         @ConfigOption(name = "Announce coords", desc = "Print coordinates in chat when one is spotted.")
         @ConfigEditorBoolean
         public boolean groundObjectAnnounce;
 
         @Expose
         @ConfigOption(name = "Warden", desc = "")
-        @ConfigEditorAccordion(id = 5)
+        @ConfigEditorAccordion(id = 6)
         public boolean accordionSafariHelpersWarden = false;
 
         @Expose
-        @ConfigAccordionId(id = 5)
+        @ConfigAccordionId(id = 6)
         @ConfigOption(name = "Warden ready title", desc = "Title when the warden's hitbox reaches full height.")
         @ConfigEditorBoolean
         public boolean announceWardenReady;
 
         @Expose
-        @ConfigAccordionId(id = 5)
+        @ConfigAccordionId(id = 6)
         @ConfigOption(name = "Watch radius", desc = "How far to watch for wardens, in blocks.")
         @ConfigEditorSlider(minValue = 8f, maxValue = 128f, minStep = 1f)
         public int wardenScanRadius;

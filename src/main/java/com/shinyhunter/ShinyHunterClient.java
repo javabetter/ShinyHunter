@@ -54,6 +54,7 @@ public class ShinyHunterClient implements ClientModInitializer {
             ClientTickEvents.END_CLIENT_TICK.register(FloorDropLog::onClientTick);
             ClientTickEvents.END_CLIENT_TICK.register(FloorDropView::onClientTick);
             ClientTickEvents.END_CLIENT_TICK.register(SparklingDiff::onClientTick);
+            ClientTickEvents.END_CLIENT_TICK.register(ScrappyFood::onClientTick);
         }
         ClientTickEvents.END_CLIENT_TICK.register(GroundObjectHighlighter::onClientTick);
         ClientTickEvents.END_CLIENT_TICK.register(WaypointManager::onClientTick);
@@ -108,6 +109,7 @@ public class ShinyHunterClient implements ClientModInitializer {
         if (!Edition.PUBLIC) {
             FloorDropLog.register(); // which item_display group each floor drop was, per run
             SparklingDiff.register(); // the before/after-ticket entity comparison, when switched on
+            ScrappyFood.register(); // which food each Scrappy wants, from feeding it
             GroundObjectHighlighter.register(); // logs what a found Duplico was, to tell it from rocks
             HideyhoLocator.register();
             HideyhoSpotter.register();
@@ -205,6 +207,7 @@ public class ShinyHunterClient implements ClientModInitializer {
                 .then(literal("resetpb").executes(ShinyHunterClient::resetBests))
                 .then(literal("zone").executes(ShinyHunterClient::showZone))
                 .then(literal("skins").executes(ShinyHunterClient::showSkins))
+                .then(literal("scrappy").executes(c -> lines(c, ScrappyFood.status())))
                 .then(literal("sparkdiff")
                         .executes(c -> lines(c, SparklingDiff.status()))
                         .then(literal("on").executes(c -> lines(c, SparklingDiff.setEnabled(true))))
