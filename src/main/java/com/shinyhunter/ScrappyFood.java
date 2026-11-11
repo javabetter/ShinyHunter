@@ -1,29 +1,14 @@
 package com.shinyhunter;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.component.DataComponents;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gizmos.Gizmos;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -35,24 +20,23 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Which food a Scrappy wants. Each Scrappy likes one of Wholesale Wheat, Flavor-packed Fish or Lush
- * Lily Pads, and nothing on screen says which, so this works from what the server says when one is fed:
- * <ul>
- *   <li>"The Scrappy happily eats the X" (or "cautiously started eating", "ate the X and came out of
- *       its shell", "reaches out its paw for more X"): it wants X;</li>
- *   <li>"This particular Scrappy doesn't seem to care for this type of food...": not the food in your
- *       hand. Two of those and the third food is the one.</li>
- * </ul>
- * Each fed Scrappy gets a label for the rest of the run.
+ * Which food each Scrappy wants: Wholesale Wheat, Flavor-packed Fish or Lush Lily Pads.
  *
- * <p><b>Learning.</b> Each feeding also records what that Scrappy is made of: skins, displayed items
- * and their models, entity types. If one look always turns out to want the same food, unfed Scrappies
- * with that look get a "likely" label too. The record is kept in
- * {@code config/shinyhunter-scrappy.json}, and each feeding's look is logged so it can be checked.
+ * <p><b>From the spawn order.</b> An instance has three Scrappies, each an armadillo with its nametag
+ * on the next entity id, and their ids give the food away (found over four runs): sorted by
+ * armadillo id, the lowest wants Wheat, the middle one Fish and the highest Lily Pads. The three sit
+ * three ids apart, so with only two of them loaded the gap still tells which is which: six apart
+ * means lowest and highest. Every Scrappy seen in an instance is remembered, so one that unloads
+ * keeps its place.
+ *
+ * <p><b>From feeding.</b> What the server says when one is fed ("happily eats the X", "doesn't seem to
+ * care for this type of food") overrides the prediction for that Scrappy, and is checked against it:
+ * {@code /shiny scrappy} shows how often the spawn order was right.
  */
 public final class ScrappyFood {
 
     public static final List<String> FOODS = List.of("Wholesale Wheat", "Flavor-packed Fish", "Lush Lily Pad");
+    private static final int[] COLOURS = {0xFFFFD75E, 0xFF5EC8FF, 0xFF6CFF6C};
 
     private static final Pattern LIKES = Pattern.compile(
             "^The Scrappy (?:happily eats the|cautiously started eating the|ate the|reaches out its paw for more) (.+?)"
@@ -60,55 +44,24 @@ public final class ScrappyFood {
     private static final Pattern REJECTS = Pattern.compile(
             "^This particular Scrappy doesn't seem to care for this type of food");
 
-    /** How long after a click the server's answer still belongs to it. */
+    /** How far apart the three Scrappies' ids are. */
+    private static final int ID_STEP = 3;
     private static final long CLICK_WINDOW_MILLIS = 3_000L;
-    /** Two feedings within this distance are the same Scrappy. */
-    private static final double SAME_SCRAPPY = 2.0;
-    /** The entities this close to the clicked one make up its look. */
-    private static final double LOOK_RADIUS = 1.5;
-    /** A look needs this many agreeing feedings, and none disagreeing, before it predicts. */
-    private static final int CONFIDENT = 2;
-    private static final int LABEL_RANGE = 48;
+    private static final int LABEL_RANGE = 64;
 
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
-
-    /** One Scrappy fed this run. */
-    private static final class Known {
-        Vec3 pos;
-        String look;
-        String wants;
-        final Set<String> not = new LinkedHashSet<>();
-
-        String verdict() {
-            if (wants != null) {
-                return wants;
-            }
-            if (not.size() == FOODS.size() - 1) {
-                for (String food : FOODS) {
-                    if (!not.contains(food)) {
-                        return food;
-                    }
-                }
-            }
-            return null;
-        }
-    }
-
-    private static final class Data {
-        String note = "Scrappy looks (skins, displayed items, entity types) and the food each one turned out to want."
-                + " Written by Shiny Hunter.";
-        Map<String, Map<String, Integer>> looks = new LinkedHashMap<>();
-    }
-
-    private static final List<Known> KNOWN = new ArrayList<>();
-    private static Data data;
+    /** Armadillo id -> where it was last seen, for every Scrappy seen this instance. */
+    private static final Map<Integer, Vec3> SCRAPPIES = new LinkedHashMap<>();
+    /** Armadillo id -> what feeding showed it wants. */
+    private static final Map<Integer, String> FED = new LinkedHashMap<>();
+    /** Armadillo id -> foods feeding showed it doesn't want. */
+    private static final Map<Integer, Set<String>> REFUSED = new LinkedHashMap<>();
     private static Object level;
-    private static Entity clicked;
+    private static Integer clicked;
     private static String heldFood;
     private static long clickedAt;
     private static int tickCounter;
-    /** Unfed Scrappies with a confident look, refreshed each second: position -> food. */
-    private static final Map<Vec3, String> LIKELY = new LinkedHashMap<>();
+    private static int right;
+    private static int wrong;
 
     private ScrappyFood() {
     }
@@ -117,7 +70,7 @@ public final class ScrappyFood {
         UseEntityCallback.EVENT.register((player, world, hand, entity, hit) -> {
             Minecraft client = Minecraft.getInstance();
             if (world.isClientSide() && player == client.player && ShinyConfig.get().scrappyFood) {
-                clicked = entity;
+                clicked = scrappyOf(client, entity);
                 heldFood = food(EntityDataProbe.stripFormatting(player.getItemInHand(hand).getHoverName().getString()));
                 clickedAt = System.currentTimeMillis();
             }
@@ -145,109 +98,102 @@ public final class ScrappyFood {
         return null;
     }
 
+    // ------------------------------------------------------------------ the spawn order
+
+    /**
+     * The food a Scrappy wants from the ids of the Scrappies seen this instance, or null while it
+     * can't be told: lowest id Wheat, middle Fish, highest Lily Pads.
+     */
+    static String predicted(int id, Set<Integer> ids) {
+        TreeSet<Integer> sorted = new TreeSet<>(ids);
+        if (!sorted.contains(id)) {
+            return null;
+        }
+        int slot;
+        if (sorted.size() >= 3) {
+            slot = sorted.headSet(id).size();
+        } else if (sorted.size() == 2 && sorted.last() - sorted.first() == 2 * ID_STEP) {
+            slot = id == sorted.first() ? 0 : 2; // the middle one is missing
+        } else {
+            return null; // one Scrappy, or two side by side: not enough to tell
+        }
+        return slot < FOODS.size() ? FOODS.get(slot) : null;
+    }
+
+    /** The armadillo id of the Scrappy this entity belongs to (the body or its nametag), or null. */
+    private static Integer scrappyOf(Minecraft client, Entity entity) {
+        if (isScrappyName(entity)) {
+            return entity.getId() - 1;
+        }
+        Entity tag = client.level.getEntity(entity.getId() + 1);
+        if (tag != null && isScrappyName(tag)) {
+            return entity.getId();
+        }
+        return null;
+    }
+
+    private static boolean isScrappyName(Entity entity) {
+        return "Scrappy".equals(CritterDex.findIn(EntityDataProbe.nameOf(entity)));
+    }
+
+    /** Collects every Scrappy loaded right now: a "Scrappy" nametag, its body one id below. */
+    private static void scan(Minecraft client) {
+        for (Entity entity : client.level.entitiesForRendering()) {
+            if (!entity.isRemoved() && isScrappyName(entity)) {
+                Entity body = client.level.getEntity(entity.getId() - 1);
+                SCRAPPIES.put(entity.getId() - 1, (body != null ? body : entity).position());
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------ feeding
+
     private static void chat(String text) {
         if (!ShinyConfig.get().scrappyFood || clicked == null
                 || System.currentTimeMillis() - clickedAt > CLICK_WINDOW_MILLIS) {
             return;
         }
         Matcher likes = LIKES.matcher(text);
+        String guess = predicted(clicked, SCRAPPIES.keySet());
         if (likes.find()) {
             String food = food(likes.group(1));
-            if (food != null) {
-                learn(food, true);
+            if (food != null && FED.put(clicked, food) == null && guess != null) {
+                score(guess.equals(food), food, guess);
             }
         } else if (REJECTS.matcher(text).find() && heldFood != null) {
-            learn(heldFood, false);
+            REFUSED.computeIfAbsent(clicked, id -> new LinkedHashSet<>()).add(heldFood);
+            if (heldFood.equals(guess)) {
+                score(false, "not " + heldFood, guess);
+            }
         }
     }
 
-    private static void learn(String food, boolean wanted) {
-        Minecraft client = Minecraft.getInstance();
-        if (client.level == null) {
-            return;
-        }
-        Vec3 at = clicked.position();
-        Known known = null;
-        for (Known candidate : KNOWN) {
-            if (candidate.pos.distanceTo(at) <= SAME_SCRAPPY) {
-                known = candidate;
-            }
-        }
-        if (known == null) {
-            known = new Known();
-            known.look = look(client, clicked);
-            KNOWN.add(known);
-        }
-        known.pos = at;
-        String before = known.verdict();
-        if (wanted) {
-            known.wants = food;
+    private static void score(boolean ok, String actual, String guess) {
+        if (ok) {
+            right++;
         } else {
-            known.not.add(food);
+            wrong++;
         }
-        String verdict = known.verdict();
-        ShinyHunterClient.LOGGER.info("Scrappy {} {} (verdict {}) — look: {}", wanted ? "wants" : "doesn't want",
-                food, verdict, known.look);
-        // A look is credited once, with its final answer: the first time this Scrappy's food is known.
-        if (verdict != null && before == null) {
-            load();
-            data.looks.computeIfAbsent(known.look, k -> new LinkedHashMap<>()).merge(verdict, 1, Integer::sum);
-            save();
-        }
+        ShinyHunterClient.LOGGER.info("Scrappy #{} wanted {}, spawn order said {} — ids seen {}",
+                clicked, actual, guess, new TreeSet<>(SCRAPPIES.keySet()));
     }
 
-    /**
-     * What a Scrappy is made of, as text: every entity near the clicked one, by type, with its skins,
-     * displayed or worn items and their models. Positions and ids are left out, so the same kind of
-     * Scrappy gives the same look every time.
-     */
-    static String look(Minecraft client, Entity entity) {
-        Set<String> parts = new TreeSet<>();
-        AABB box = entity.getBoundingBox().inflate(LOOK_RADIUS);
-        List<Entity> near = new ArrayList<>(client.level.getEntities(entity, box));
-        near.add(entity);
-        for (Entity part : near) {
-            if (part == client.player || part.getId() < 0) {
-                continue;
-            }
-            StringBuilder out = new StringBuilder(EntityType.getKey(part.getType()).getPath());
-            for (String hash : TextureProbe.hashesOf(part)) {
-                out.append(" skin=").append(hash, 0, Math.min(16, hash.length()));
-            }
-            if (part instanceof Display.ItemDisplay display) {
-                out.append(" item=").append(item(display.getItemStack()));
-            }
-            if (part instanceof LivingEntity living) {
-                for (EquipmentSlot slot : EquipmentSlot.VALUES) {
-                    ItemStack stack = living.getItemBySlot(slot);
-                    if (!stack.isEmpty()) {
-                        out.append(' ').append(slot.getName()).append('=').append(item(stack));
-                    }
+    /** What to show for one Scrappy: feeding first, then the spawn order. */
+    private static String verdict(int id) {
+        String fed = FED.get(id);
+        if (fed != null) {
+            return fed;
+        }
+        Set<String> refused = REFUSED.getOrDefault(id, Set.of());
+        if (refused.size() == FOODS.size() - 1) {
+            for (String food : FOODS) {
+                if (!refused.contains(food)) {
+                    return food;
                 }
             }
-            parts.add(out.toString());
         }
-        return String.join(" | ", parts);
-    }
-
-    private static String item(ItemStack stack) {
-        if (stack.isEmpty()) {
-            return "empty";
-        }
-        String id = BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath();
-        var model = stack.get(DataComponents.ITEM_MODEL);
-        return model == null ? id : id + "@" + model;
-    }
-
-    /** The food a look has always turned out to want, once that's happened often enough. */
-    private static String predicted(String look) {
-        load();
-        Map<String, Integer> counts = data.looks.get(look);
-        if (counts == null || counts.size() != 1) {
-            return null;
-        }
-        Map.Entry<String, Integer> only = counts.entrySet().iterator().next();
-        return only.getValue() >= CONFIDENT ? only.getKey() : null;
+        String guess = predicted(id, SCRAPPIES.keySet());
+        return guess != null && !refused.contains(guess) ? guess : null;
     }
 
     // ------------------------------------------------------------------ labels
@@ -255,66 +201,31 @@ public final class ScrappyFood {
     public static void onClientTick(Minecraft client) {
         if (client.level != level) {
             level = client.level;
-            KNOWN.clear();
-            LIKELY.clear();
+            SCRAPPIES.clear();
+            FED.clear();
+            REFUSED.clear();
             clicked = null;
         }
         if (!ShinyConfig.get().scrappyFood || client.level == null || client.player == null
                 || !SafariBiomes.playerInSafari(client)) {
             return;
         }
-        if (++tickCounter >= 20) {
+        if (++tickCounter >= 10) {
             tickCounter = 0;
-            findLikely(client);
+            scan(client);
         }
-        for (Known known : KNOWN) {
-            String verdict = known.verdict();
-            if (verdict != null) {
-                label(known.pos, "Wants " + verdict, 0xFF55FF55);
-            } else if (!known.not.isEmpty()) {
-                label(known.pos, "Not " + String.join(", ", known.not), 0xFFFF7777);
-            }
-        }
-        for (Map.Entry<Vec3, String> likely : LIKELY.entrySet()) {
-            label(likely.getKey(), "Likely " + likely.getValue(), 0xFFFFFF55);
-        }
-    }
-
-    /** Scrappies not fed yet whose look has a confident answer. */
-    private static void findLikely(Minecraft client) {
-        LIKELY.clear();
-        load();
-        if (data.looks.isEmpty()) {
-            return;
-        }
-        for (Entity entity : client.level.entitiesForRendering()) {
-            if (!"Scrappy".equals(CritterDex.findIn(EntityDataProbe.nameOf(entity)))
-                    || client.player.distanceToSqr(entity) > LABEL_RANGE * LABEL_RANGE) {
-                continue;
-            }
-            Vec3 at = entity.position();
-            if (KNOWN.stream().anyMatch(known -> known.pos.distanceTo(at) <= SAME_SCRAPPY)) {
-                continue;
-            }
-            // The nametag rides on a stand above the body; the look is the body and its parts.
-            Entity body = entity;
-            double best = Double.MAX_VALUE;
-            for (Entity near : client.level.getEntities(entity, entity.getBoundingBox().inflate(1.0, 3.0, 1.0))) {
-                double d = near.distanceToSqr(entity);
-                if (!near.getType().equals(entity.getType()) && d < best) {
-                    best = d;
-                    body = near;
-                }
-            }
-            String food = predicted(look(client, body));
+        for (Map.Entry<Integer, Vec3> scrappy : SCRAPPIES.entrySet()) {
+            Entity body = client.level.getEntity(scrappy.getKey());
+            Vec3 at = body != null ? body.position() : scrappy.getValue();
+            String food = verdict(scrappy.getKey());
             if (food != null) {
-                LIKELY.put(at, food);
+                label(client, at, food, COLOURS[FOODS.indexOf(food)]);
             }
         }
     }
 
-    private static void label(Vec3 at, String text, int colour) {
-        if (Minecraft.getInstance().player.position().distanceToSqr(at) > LABEL_RANGE * LABEL_RANGE) {
+    private static void label(Minecraft client, Vec3 at, String text, int colour) {
+        if (client.player.position().distanceToSqr(at) > LABEL_RANGE * LABEL_RANGE) {
             return;
         }
         try {
@@ -326,51 +237,21 @@ public final class ScrappyFood {
         }
     }
 
-    // ------------------------------------------------------------------ command & storage
+    // ------------------------------------------------------------------ command
 
-    /** {@code /shiny scrappy}: what's known this run, and what the looks have taught so far. */
+    /** {@code /shiny scrappy}: this instance's Scrappies, and how the spawn order has done. */
     public static List<String> status() {
-        load();
         List<String> lines = new ArrayList<>();
         lines.add("§b§lScrappy food §7— " + (ShinyConfig.get().scrappyFood ? "§aon" : "§coff")
-                + "§7, " + KNOWN.size() + " fed this run, " + data.looks.size() + " look(s) learned");
-        for (Map.Entry<String, Map<String, Integer>> look : data.looks.entrySet()) {
-            String verdict = look.getValue().size() == 1 ? "§a" : "§c";
-            lines.add("  " + verdict + look.getValue() + " §8" + (look.getKey().length() > 70
-                    ? look.getKey().substring(0, 70) + "…" : look.getKey()));
+                + "§7 · spawn order right §a" + right + "§7, wrong §c" + wrong + " §8(this session)");
+        for (Integer id : new TreeSet<>(SCRAPPIES.keySet())) {
+            String food = verdict(id);
+            lines.add("  §7#" + id + " §f" + (food == null ? "?" : food)
+                    + (FED.containsKey(id) ? " §8(fed)" : ""));
         }
-        lines.add("§8" + path());
+        if (SCRAPPIES.isEmpty()) {
+            lines.add("  §7No Scrappy seen in this instance yet.");
+        }
         return lines;
-    }
-
-    private static Path path() {
-        return FabricLoader.getInstance().getConfigDir().resolve("shinyhunter-scrappy.json");
-    }
-
-    private static void load() {
-        if (data != null) {
-            return;
-        }
-        data = new Data();
-        if (!Files.exists(path())) {
-            return;
-        }
-        try {
-            Data read = GSON.fromJson(Files.readString(path(), StandardCharsets.UTF_8), Data.class);
-            if (read != null && read.looks != null) {
-                data = read;
-            }
-        } catch (IOException | RuntimeException e) {
-            ShinyHunterClient.LOGGER.warn("Couldn't read the Scrappy food record — starting a new one", e);
-        }
-    }
-
-    private static void save() {
-        try {
-            Files.createDirectories(path().getParent());
-            Files.writeString(path(), GSON.toJson(data), StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            ShinyHunterClient.LOGGER.warn("Couldn't save the Scrappy food record", e);
-        }
     }
 }

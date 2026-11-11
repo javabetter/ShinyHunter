@@ -471,7 +471,7 @@ public class ConfigScreen extends Screen {
             group("Scrappy");
         }
         if (!Edition.PUBLIC) {
-            bool("Scrappy food", "Label each Scrappy with the food it wants once fed, and predict it for ones that look the same. /shiny scrappy",
+            bool("Scrappy food", "Label each Scrappy with the food it wants, from the order its entity ids spawned in. /shiny scrappy",
                     () -> c.scrappyFood, v -> c.scrappyFood = v);
         }
         group("Hideyho & quests");

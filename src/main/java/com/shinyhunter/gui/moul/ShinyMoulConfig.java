@@ -962,7 +962,7 @@ public class ShinyMoulConfig extends Config {
 
         @Expose
         @ConfigAccordionId(id = 3)
-        @ConfigOption(name = "Scrappy food", desc = "Label each Scrappy with the food it wants once fed, and predict it for ones that look the same. /shiny scrappy")
+        @ConfigOption(name = "Scrappy food", desc = "Label each Scrappy with the food it wants, from the order its entity ids spawned in. /shiny scrappy")
         @ConfigEditorBoolean
         public boolean scrappyFood;
 
