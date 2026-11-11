@@ -98,6 +98,25 @@ public final class ShinyConfig {
     /** Seconds Safari Join Assist waits before each action. */
     public double safariAssistDelaySeconds = 0.5;
 
+    /** Accept party invites by itself: off / everyone / list / friends (friends, guild and the list). */
+    public String autoJoinMode = "off";
+
+    /** Names auto-join accepts in "list" and "friends" mode, comma-separated. */
+    public String autoJoinList = "";
+
+    /** Chime when an invite is auto-accepted. */
+    public boolean autoJoinChime = true;
+
+    /** Leave your current party (/p leave) before accepting. */
+    public boolean autoJoinLeaveFirst = false;
+
+    /** Once in the party, ask to be warped in (/pc !w). */
+    public boolean autoJoinAskWarp = false;
+
+    /** Friends and guild members learned from chat, lower case, for "friends" mode. */
+    public List<String> knownFriends = new ArrayList<>();
+    public List<String> knownGuild = new ArrayList<>();
+
     /** Master switch. {@code /shinyhunter toggle}. */
     public boolean enabled = true;
 

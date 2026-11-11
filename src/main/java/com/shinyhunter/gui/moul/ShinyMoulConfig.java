@@ -699,6 +699,41 @@ public class ShinyMoulConfig extends Config {
         @ConfigEditorSlider(minValue = 0.0f, maxValue = 10.0f, minStep = 0.1f)
         public double safariAssistDelaySeconds;
 
+        @Expose
+        @ConfigOption(name = "Party invites", desc = "")
+        @ConfigEditorAccordion(id = 7)
+        public boolean accordionPartyPartyInvites = false;
+
+        @Expose
+        @ConfigAccordionId(id = 7)
+        @ConfigOption(name = "Auto-join", desc = "Accept party invites by itself: off / everyone / list / friends (friends, guild and the list). /shiny invites")
+        @ConfigEditorText
+        public String autoJoinMode = "";
+
+        @Expose
+        @ConfigAccordionId(id = 7)
+        @ConfigOption(name = "Auto-join list", desc = "Names to accept invites from in list and friends mode, comma-separated.")
+        @ConfigEditorText
+        public String autoJoinList = "";
+
+        @Expose
+        @ConfigAccordionId(id = 7)
+        @ConfigOption(name = "Invite chime", desc = "Play a chime when an invite is accepted.")
+        @ConfigEditorBoolean
+        public boolean autoJoinChime;
+
+        @Expose
+        @ConfigAccordionId(id = 7)
+        @ConfigOption(name = "Leave current party", desc = "Run /p leave before accepting, so an invite works while you're in a party.")
+        @ConfigEditorBoolean
+        public boolean autoJoinLeaveFirst;
+
+        @Expose
+        @ConfigAccordionId(id = 7)
+        @ConfigOption(name = "Ask to be warped", desc = "Once you've joined, say !w in party chat so they warp you in.")
+        @ConfigEditorBoolean
+        public boolean autoJoinAskWarp;
+
     }
 
     public static class SafariHelpersCategory {
