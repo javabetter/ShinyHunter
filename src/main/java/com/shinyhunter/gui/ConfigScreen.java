@@ -429,6 +429,17 @@ public class ConfigScreen extends Screen {
                 () -> c.safariAssistPartner, v -> c.safariAssistPartner = v);
         decimal("Delay (s)", "Seconds to wait before each invite, transfer or party message.",
                 () -> c.safariAssistDelaySeconds, v -> c.safariAssistDelaySeconds = v, 0.0, 10.0);
+        group("Party invites");
+        text("Auto-join", "Accept party invites by itself: off / everyone / list / friends (friends, guild and the list). /shiny invites",
+                () -> c.autoJoinMode, v -> c.autoJoinMode = v);
+        text("Auto-join list", "Names to accept invites from in list and friends mode, comma-separated.",
+                () -> c.autoJoinList, v -> c.autoJoinList = v);
+        bool("Invite chime", "Play a chime when an invite is accepted.",
+                () -> c.autoJoinChime, v -> c.autoJoinChime = v);
+        bool("Leave current party", "Run /p leave before accepting, so an invite works while you're in a party.",
+                () -> c.autoJoinLeaveFirst, v -> c.autoJoinLeaveFirst = v);
+        bool("Ask to be warped", "Once you've joined, say !w in party chat so they warp you in.",
+                () -> c.autoJoinAskWarp, v -> c.autoJoinAskWarp = v);
 
         // ------------------------------------------------------------------ Safari helpers
         section("Safari helpers");

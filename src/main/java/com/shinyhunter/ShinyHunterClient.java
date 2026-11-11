@@ -44,6 +44,7 @@ public class ShinyHunterClient implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(BeeNestHighlighter::onClientTick);
         ClientTickEvents.END_CLIENT_TICK.register(NestSurvey::onClientTick);
         ClientTickEvents.END_CLIENT_TICK.register(HoneyHives::onClientTick);
+        ClientTickEvents.END_CLIENT_TICK.register(PartyInvites::onClientTick);
         ClientTickEvents.END_CLIENT_TICK.register(SafariMode::onClientTick);
         ClientTickEvents.END_CLIENT_TICK.register(OwnStats::onClientTick);
         ClientTickEvents.END_CLIENT_TICK.register(com.shinyhunter.gui.moul.MoulConfigBridge::onClientTick);
@@ -163,6 +164,7 @@ public class ShinyHunterClient implements ClientModInitializer {
         UpdateChecker.register();
         SafariJoinAssist.register();
         TicketCounter.register();
+        PartyInvites.register();
         ContestClaims.register();
         Shaders.registerWithIris();
         var all = ShinyScanner.allKeywords(config);
@@ -206,6 +208,13 @@ public class ShinyHunterClient implements ClientModInitializer {
                 .then(literal("splits").executes(ShinyHunterClient::showSplits))
                 .then(literal("resetpb").executes(ShinyHunterClient::resetBests))
                 .then(literal("zone").executes(ShinyHunterClient::showZone))
+                .then(literal("invites").executes(c -> {
+                    for (String line : PartyInvites.status()) { // invites
+                        c.getSource().sendFeedback(Component.literal(line));
+                    }
+                    c.getSource().sendFeedback(PartyInvites.learnHint());
+                    return Command.SINGLE_SUCCESS;
+                }))
                 .then(literal("skins").executes(ShinyHunterClient::showSkins))
                 .then(literal("scrappy").executes(c -> lines(c, ScrappyFood.status())))
                 .then(literal("sparkdiff")
