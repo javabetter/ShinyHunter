@@ -447,6 +447,15 @@ public class ConfigScreen extends Screen {
                 () -> c.announceWardenReady, v -> c.announceWardenReady = v);
         number("Watch radius", "How far to watch for wardens, in blocks.",
                 () -> c.wardenScanRadius, v -> c.wardenScanRadius = v, 8, 128);
+        group("Capsule path");
+        bool("Capsule landing", "Holding a Critter Capsule, mark where it will land, and colour the mob it would hit. Never aims for you.",
+                () -> c.capsulePath, v -> c.capsulePath = v);
+        bool("Show arc", "Draw the capsule's whole flight, not just where it lands.",
+                () -> c.capsulePathArc, v -> c.capsulePathArc = v);
+        text("Path colour (hex)", "Arc and landing colour when it would land on terrain.",
+                () -> c.capsulePathColor, v -> c.capsulePathColor = v);
+        text("Hit colour (hex)", "Arc, landing and mob outline colour when it would hit a mob.",
+                () -> c.capsuleHitColor, v -> c.capsuleHitColor = v);
 
         // ------------------------------------------------------------------ Floor drops
         section("Floor drops");

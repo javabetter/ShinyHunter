@@ -912,6 +912,35 @@ public class ShinyMoulConfig extends Config {
         @ConfigEditorSlider(minValue = 8f, maxValue = 128f, minStep = 1f)
         public int wardenScanRadius;
 
+        @Expose
+        @ConfigOption(name = "Capsule path", desc = "")
+        @ConfigEditorAccordion(id = 6)
+        public boolean accordionSafariHelpersCapsulePath = false;
+
+        @Expose
+        @ConfigAccordionId(id = 6)
+        @ConfigOption(name = "Capsule landing", desc = "Holding a Critter Capsule, mark where it will land, and colour the mob it would hit. Never aims for you.")
+        @ConfigEditorBoolean
+        public boolean capsulePath;
+
+        @Expose
+        @ConfigAccordionId(id = 6)
+        @ConfigOption(name = "Show arc", desc = "Draw the capsule's whole flight, not just where it lands.")
+        @ConfigEditorBoolean
+        public boolean capsulePathArc;
+
+        @Expose
+        @ConfigAccordionId(id = 6)
+        @ConfigOption(name = "Path colour (hex)", desc = "Arc and landing colour when it would land on terrain.")
+        @ConfigEditorText
+        public String capsulePathColor = "";
+
+        @Expose
+        @ConfigAccordionId(id = 6)
+        @ConfigOption(name = "Hit colour (hex)", desc = "Arc, landing and mob outline colour when it would hit a mob.")
+        @ConfigEditorText
+        public String capsuleHitColor = "";
+
     }
 
     public static class FloorDropsCategory {
