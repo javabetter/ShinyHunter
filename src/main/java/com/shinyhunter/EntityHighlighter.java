@@ -401,7 +401,8 @@ public final class EntityHighlighter {
                         ? (EntityDataProbe.nameOf(entity).isBlank() ? entry.getValue().tracker().token.trim()
                                 : EntityDataProbe.nameOf(entity).trim())
                         : entry.getValue().label();
-                int stroke = BeeNestHighlighter.parseColor(entry.getValue().tracker().color, 0xFFFFAA33);
+                int stroke = CapsulePath.strokeFor(entry.getKey(),
+                        BeeNestHighlighter.parseColor(entry.getValue().tracker().color, 0xFFFFAA33));
                 int fill = (stroke & 0x00FFFFFF) | 0x33000000;
                 GizmoStyle style = GizmoStyle.strokeAndFill(stroke, 2.0f, fill);
 
@@ -438,6 +439,11 @@ public final class EntityHighlighter {
         } catch (IllegalStateException e) {
             ShinyHunterClient.LOGGER.debug("Can't emit entity highlights", e);
         }
+    }
+
+    /** Whether this entity is outlined right now. */
+    public static boolean isMatched(int entityId) {
+        return MATCHED.containsKey(entityId);
     }
 
     public static int highlightedCount() {

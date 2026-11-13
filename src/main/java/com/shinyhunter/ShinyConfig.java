@@ -107,6 +107,17 @@ public final class ShinyConfig {
     /** Seconds Safari Join Assist waits before each action. */
     public double safariAssistDelaySeconds = 0.5;
 
+    /** Holding a Critter Capsule: show where it will land, and colour the mob it would hit. */
+    public boolean capsulePath = true;
+
+    /** Draw the whole arc, not just the landing spot. */
+    public boolean capsulePathArc = true;
+
+    public String capsulePathColor = "FFB040";
+
+    /** Colour for the arc, landing spot and outline when the capsule would hit a mob. */
+    public String capsuleHitColor = "FF40FF";
+
     /** Accept party invites by itself: off / everyone / list / friends (friends, guild and the list). */
     public String autoJoinMode = "off";
 
